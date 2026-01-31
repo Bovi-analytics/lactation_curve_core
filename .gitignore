@@ -9,3 +9,8 @@ wheels/
 # Virtual environments
 .venv
 .env
+
+# Testing and linting caches
+.pytest_cache/
+.ruff_cache/
+
