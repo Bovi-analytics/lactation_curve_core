@@ -1,63 +1,146 @@
-# %% md
-# Functions for fitting of lactation curve models to lactation data
-# %% md
-# Author: Meike van Leerdam, Date: 12-8-2025
-# %%
+
+''' 
+Lactation curve fitting module.
+
+This module provides functions for fitting lactation curve models to dairy cow
+lactation data and predicting milk yield over a standard horizon.
+
+Pre-defined lactation curve models
+----------------------------------
+- Models that can be fitted using frequentist statistics (numeric and least squares optimization):
+    - Wood
+    - Wilmink
+    - Ali & Schaeffer
+    - Fischer
+    - MilkBot
+
+- Models that can be fitted using Bayesian fitting:
+    - MilkBot
+
+- Models that are currently implemented but not yet available for fitting:
+    - Brody
+    - Sikka
+    - Nelder
+    - Dhanoa
+    - Emmans
+    - Hayashi
+    - Rook
+    - Dijkstra
+    - Prasad
+
+Author: Meike van Leerdam  
+Date: 12-8-2025  
+Last update: 11-feb-2025
+
+Requires
+--------
+- numpy
+- scipy
+- requests
+- lactationcurve.preprocessing.validate_and_prepare_inputs
+
+Public functions
+----------------
+- fit_lactation_curve(dim, milkrecordings, model="wood", fitting="frequentist", breed="H", parity=3, continent="USA", key=None)  
+  Fit a lactation curve to the provided data and return predicted milk yield
+  for each day in milk (DIM) in the range 1–305 (or up to the maximum DIM if it exceeds 305).
+
+- get_lc_parameters(dim, milkrecordings, model="wood")  
+  Fit a lactation curve to the provided data and return model parameters using
+  frequentist statistics: minimize/curve_fit.
+
+- get_lc_parameters_least_squares(dim, milkrecordings, model="milkbot")  
+  Fit a lactation curve to the provided data and return model parameters using
+  least-squares estimation (frequentist).
+
+Notes
+-----
+- Units: DIM in days, milk in kg.
+- Input validation and normalization are delegated to
+  `lactationcurve.preprocessing.validate_and_prepare_inputs`.
+'''
 
 # packages
 import numpy as np
 import requests
 from scipy.optimize import curve_fit, least_squares, minimize
-
 from lactationcurve.preprocessing import validate_and_prepare_inputs
 
 
 # --- Models ---
 def milkbot_model(t, a, b, c, d):
-    """MilkBot lactation curve model
+    """MilkBot lactation curve model.
 
-    Input variables:
-        t = time since calving in days (DIM)
-        a = scale, the overall level of milk production
-        b = ramp, governs the rate of the rise in early lactation
-        c = offset is a small (usually insignificant) correction for time between calving and the theoretical start of lactation
-        d = decay is the rate of exponential decline, most apparent in late lactation
+    Args:
+        t: Time since calving in days (DIM), scalar or array-like.
+        a: Scale; overall level of milk production.
+        b: Ramp; governs the rate of rise in early lactation.
+        c: Offset; small (usually minor) correction around the theoretical start of lactation.
+        d: Decay; exponential decline rate, evident in late lactation.
 
-    output: milk yield at time t
+    Returns:
+        Predicted milk yield at `t` (same shape as `t`).
+
+    Notes:
+        Formula: `y(t) = a * (1 - exp((c - t) / b) / 2) * exp(-d * t)`.
     """
     return a * (1 - np.exp((c - t) / b) / 2) * np.exp(-d * t)
 
 
 def wood_model(t, a, b, c):
-    """Wood Lactation curve model
-    Input variables:
-        t = time since calving in days (DIM)
-        a,b,c = parameters Wood model (numerical)
+    """Wood lactation curve model.
 
-    Output: milk yield at time t
+    Args:
+        t: Time since calving in days (DIM), scalar or array-like.
+        a: Scale parameter (numerical).
+        b: Shape parameter controlling rise (numerical).
+        c: Decay parameter (numerical).
+
+    Returns:
+        Predicted milk yield at `t`.
+
+    Notes:
+        Formula: `y(t) = a * t**b * exp(-c * t)`.
     """
     return a * (t**b) * np.exp(-c * t)
 
 
 def wilmink_model(t, a, b, c, k=-0.05):
-    """Wilmink Lactation curve model
-    Input variables:
-        t = time since calving in days (DIM)
-        a,b,c = parameters Wilmink model, (numerical)
-        k = parameter Wilmink function (numerical), with default value -0.05
-    Output: milk yield at time t
+    """Wilmink lactation curve model.
+
+    Args:
+        t: Time since calving in days (DIM), scalar or array-like.
+        a: Intercept-like parameter (numerical).
+        b: Linear trend coefficient (numerical).
+        c: Exponential-term scale (numerical).
+        k: Fixed exponential rate (numerical), default -0.05.
+
+    Returns:
+        Predicted milk yield at `t`.
+
+    Notes:
+        Formula: `y(t) = a + b * t + c * exp(k * t)`.
     """
     t = np.asarray(t)
     return a + b * t + c * np.exp(k * t)
 
 
 def ali_schaeffer_model(t, a, b, c, d, k):
-    """Ali & Schaeffer Lactation curve model
-    Input variables:
-        t = time since calving in days (DIM)
-        a,b,c,d,k = parameters Ali & Schaeffer model (numerical)
+    """Ali & Schaeffer lactation curve model.
 
-    Output: milk yield at time t
+    Args:
+        t: Time since calving in days (DIM). Use `t >= 1` to avoid `log(0)`.
+        a: Intercept-like parameter (numerical).
+        b: Linear coefficient on scaled time `t/340` (numerical).
+        c: Quadratic coefficient on scaled time `t/340` (numerical).
+        d: Coefficient on `log(340/t)` (numerical).
+        k: Coefficient on `[log(340/t)]^2` (numerical).
+
+    Returns:
+        Predicted milk yield at `t`.
+
+    Notes:
+        Uses `t_scaled = t / 340` and `log_term = ln(340 / t)`.
     """
     t_scaled = t / 340
     log_term = np.log(340 / t)
@@ -65,131 +148,235 @@ def ali_schaeffer_model(t, a, b, c, d, k):
 
 
 def fischer_model(t, a, b, c):
-    """Fischer Lactation curve model
-    Input variables:
-        t = time since calving in days (DIM)
-        a,b,c,d,k = parameters Wood model (numerical)
+    """Fischer lactation curve model.
 
-    Output: milk yield at time t
+    Args:
+        t: Time since calving in days (DIM).
+        a: Scale parameter (numerical).
+        b: Linear decline parameter (numerical).
+        c: Exponential decay parameter (numerical).
+
+    Returns:
+        Predicted milk yield at `t`.
     """
     return a - b * t - a * np.exp(-c * t)
 
 
 def brody_model(t, a, k):
-    """Brody Lactation curve model
-    Input variables:
-        t = time since calving in days (DIM)
-        a,k = parameters Brody model (numerical)
+    """Brody lactation curve model.
 
-    Output: milk yield at time t
+    Args:
+        t: Time since calving in days (DIM).
+        a: Scale parameter (numerical).
+        k: Decay parameter (numerical).
+
+    Returns:
+        Predicted milk yield at `t`.
     """
     return a * np.exp(-k * t)
 
 
 def sikka_model(t, a, b, c):
-    """Sikka Lactation curve model
-    Input variables:
-    t = time since calving in days (DIM)
-    a,b,c= parameters Sikka model (numerical)
+    """Sikka lactation curve model.
 
-    Output: milk yield at time t
+    Args:
+        t: Time since calving in days (DIM).
+        a: Scale parameter (numerical).
+        b: Growth parameter (numerical).
+        c: Quadratic decay parameter (numerical).
+
+    Returns:
+        Predicted milk yield at `t`.
     """
     return a * np.exp(b * t - c * t**2)
 
 
 def nelder_model(t, a, b, c):
-    """Nelder Lactation curve model
-    Input variables:
-    t = time since calving in days (DIM)
-    a,b,c= parameters Nelder model (numerical)
+    """Nelder lactation curve model.
 
-    Output: milk yield at time t
+    Args:
+        t: Time since calving in days (DIM).
+        a: Denominator intercept (numerical).
+        b: Denominator linear coefficient (numerical).
+        c: Denominator quadratic coefficient (numerical).
+
+    Returns:
+        Predicted milk yield at `t`.
+
+    Notes:
+        Formula: `y(t) = t / (a + b*t + c*t**2)`.
     """
     return t / (a + b * t + c * t**2)
 
 
 def dhanoa_model(t, a, b, c):
-    """Dhanoa Lactation curve model
-    Input variables:
-    t = time since calving in days (DIM)
-    a,b,c= parameters Dhanoa model (numerical)
+    """Dhanoa lactation curve model.
 
-    Output: milk yield at time t
+    Args:
+        t: Time since calving in days (DIM).
+        a: Scale parameter (numerical).
+        b: Shape parameter (numerical).
+        c: Decay parameter (numerical).
+
+    Returns:
+        Predicted milk yield at `t`.
+
+    Notes:
+        Formula: `y(t) = a * t ** (b * c) * exp(-c * t)`.
     """
     return a * t ** (b * c) * np.exp(-c * t)
 
 
 def emmans_model(t, a, b, c, d):
-    """Emmans Lactation curve model
-    Input variables:
-    t = time since calving in days (DIM)
-    a,b,c,d = parameters Emmans model (numerical)
+    """Emmans lactation curve model.
 
-    Output: milk yield at time t
+    Args:
+        t: Time since calving in days (DIM).
+        a: Scale parameter (numerical).
+        b: Growth parameter (numerical).
+        c: Decay parameter (numerical).
+        d: Location parameter in nested exponential (numerical).
+
+    Returns:
+        Predicted milk yield at `t`.
+
+    Notes:
+        Formula: `y(t) = a * exp(-exp(d - b*t)) * exp(-c*t)`.
     """
     return a * np.exp(-np.exp(d - b * t)) * np.exp(-c * t)
 
 
 def hayashi_model(t, a, b, c, d):
-    """Hayashi Lactation curve model
-    Input variables:
-    t = time since calving in days (DIM)
-    a,b,c,d = parameters Hayashi model (numerical)
+    """Hayashi lactation curve model.
 
-    Output: milk yield at time t
+    Args:
+        t: Time since calving in days (DIM).
+        a: Ratio parameter (> 0) (numerical).
+        b: Scale parameter (numerical).
+        c: Time constant for the first exponential term (numerical).
+        d: Parameter retained for compatibility with literature (unused in this expression).
+
+    Returns:
+        Predicted milk yield at `t`.
+
+    Notes:
+        Formula: `y(t) = b * (exp(-t / c) - exp(-t / (a * c)))`.
     """
     return b * (np.exp(-t / c) - np.exp(-t / (a * c)))
 
 
 def rook_model(t, a, b, c, d):
-    """Rook Lactation curve model
-    Input variables:
-    t = time since calving in days (DIM)
-    a,b,c,d = parameters Rook model (numerical)
+    """Rook lactation curve model.
 
-    Output: milk yield at time t
+    Args:
+        t: Time since calving in days (DIM).
+        a: Scale parameter (numerical).
+        b: Shape parameter in rational term (numerical).
+        c: Offset parameter in rational term (numerical).
+        d: Exponential decay parameter (numerical).
+
+    Returns:
+        Predicted milk yield at `t`.
+
+    Notes:
+        Formula: `y(t) = a * (1 / (1 + b / (c + t))) * exp(-d * t)`.
     """
     return a * (1 / (1 + b / (c + t))) * np.exp(-d * t)
 
 
 def dijkstra_model(t, a, b, c, d):
-    """Dijkstra Lactation curve model
-    Input variables:
-    t = time since calving in days (DIM)
-    a,b,c,d = parameters Dijkstra model (numerical)
+    """Dijkstra lactation curve model.
 
-    Output: milk yield at time t
+    Args:
+        t: Time since calving in days (DIM).
+        a: Scale parameter (numerical).
+        b: Growth parameter (numerical).
+        c: Saturation rate parameter (numerical).
+        d: Decay parameter (numerical).
+
+    Returns:
+        Predicted milk yield at `t`.
+
+    Notes:
+        Formula: `y(t) = a * exp((b * (1 - exp(-c * t)) / c) - d * t)`.
     """
     return a * np.exp((b * (1 - np.exp(-c * t)) / c) - d * t)
 
 
 def prasad_model(t, a, b, c, d):
-    """Prasad Lactation curve model
-    Input variables:
-    t = time since calving in days (DIM)
-    a,b,c,d = parameters Prasad model (numerical)
+    """Prasad lactation curve model.
 
-    Output: milk yield at time t
+    Args:
+        t: Time since calving in days (DIM).
+        a: Intercept-like parameter (numerical).
+        b: Linear coefficient (numerical).
+        c: Quadratic coefficient (numerical).
+        d: Inverse-time coefficient (numerical).
+
+    Returns:
+        Predicted milk yield at `t`.
+
+    Notes:
+        Formula: `y(t) = a + b*t + c*t**2 + d/t`.
     """
     return a + b * t + c * t**2 + d / t
 
 
 # objectives for minimize
 def wood_objective(par, x, y):
+    """Objective function (sum of squared errors) for the Wood model.
+
+    Args:
+        par: Parameter vector `(a, b, c)`.
+        x: DIM values.
+        y: Observed milk yields.
+
+    Returns:
+        Sum of squared residuals between observed values and Wood model predictions.
+    """
     return np.sum((y - wood_model(x, *par)) ** 2)
 
 
 def milkbot_objective(par, x, y):
+    """Objective function (sum of squared errors) for the MilkBot model.
+
+    Args:
+        par: Parameter vector `(a, b, c, d)`.
+        x: DIM values.
+        y: Observed milk yields.
+
+    Returns:
+        Sum of squared residuals between observed values and MilkBot predictions.
+    """
     return np.sum((y - milkbot_model(x, *par)) ** 2)
 
 
 def milkbot_constraint(par, dim):
+    """Constraint helper for MilkBot optimization (non-negativity).
+
+    Args:
+        par: Parameter vector `(a, b, c, d)`.
+        dim: DIM values.
+
+    Returns:
+        The minimum predicted value across `dim`, suitable for inequality constraints.
+    """
     a, b, c, d = par
     preds = milkbot_model(dim, a, b, c, d)
     return np.min(preds)
 
 
 def residuals_milkbot(par, x, y):
+    """Residuals for least-squares fitting of the MilkBot model.
+
+    Args:
+        par: Parameter vector `(a, b, c, d)`.
+        x: DIM values.
+        y: Observed milk yields.
+
+    Returns:
+        Vector of residuals `y - y_pred`.
+    """
     return y - milkbot_model(x, *par)
 
 
@@ -203,21 +390,37 @@ def fit_lactation_curve(
     continent="USA",
     key=None,
 ):
-    """Fit lactation data to a lactation curve model using sklearn minimize or curvefit or the MilkBot Bayesian fitting API
-    Input variables:
-    dim (Int) = list of dim
-    milkrecordings (Float) = list of milk recordings
-    model (Str)= type of pre-defined model function, default = Wood model. Model name is all lowercase
-    fitting (Str) = method of fitting the data to the curve using optimalization either frequentist(curvefit/minimize) or Bayesian, default is frequentist. In the current version only for the MilkBot model Bayesian fitting is available.
+    """Fit lactation data to a lactation curve model and return predictions.
 
-    Only relevant if fitting is Bayesian
-        breed (Str): either H or J, H = Holstein and is the default, J = Jersey
-        Parity (Int): lactionnumber, default = 3, all parities >= 3 are considered as one group
-        Continent (Str): source of the default priors, can be USA (default), EU or from Chen et al.
-        key (Str): key for the milkbot API  Mandatory to use fitting API. For a free API Key, contact Jim Ehrlich jehrlich@MilkBot.com
+    Depending on `fitting`:
+    - **frequentist**: Fits parameters using `minimize` and/or `curve_fit`
+      for the specified `model`, then predicts over DIM 1–305 (or up to `max(dim)` if greater).
+    - **bayesian**: (MilkBot only) Calls the MilkBot Bayesian fitting API and
+      returns predictions using the fitted parameters.
 
-    Output (list of floats): list of milk yield for range 1-305 or until the maximum day in milk when this is more than 305"""
+    Args:
+        dim (Int): List/array of days in milk (DIM).
+        milkrecordings (Float): List/array of milk recordings (kg).
+        model (Str): Model name (lowercase), default "wood".
+            Supported for frequentist: "wood", "wilmink", "ali_schaeffer", "fischer", "milkbot".
+        fitting (Str): "frequentist" (default) or "bayesian".
+            Bayesian fitting is currently implemented only for "milkbot".
+        breed (Str): "H" (Holstein, default) or "J" (Jersey). Only used for Bayesian.
+        parity (Int): Lactation number; all parities &gt;= 3 considered one group in priors (Bayesian).
+        continent (Str): Prior source for Bayesian, "USA" (default), "EU", or "CHEN".
+        key (Str | None): API key for MilkBot (required when `fitting == "bayesian"`).
 
+    Returns:
+        List/array of predicted milk yield for DIM 1–305 (or up to the maximum DIM if &gt; 305).
+
+    Raises:
+        Exception: If an unknown model is requested (frequentist),
+            or Bayesian is requested for a non-MilkBot model,
+            or `key` is missing when Bayesian fitting is requested.
+
+    Notes:
+        Uses `validate_and_prepare_inputs` for input checking and normalization.
+    """
     # check and prepare input
     inputs = validate_and_prepare_inputs(
         dim,
@@ -240,7 +443,7 @@ def fit_lactation_curve(
     if fitting == "frequentist":
         if model == "wood":
             a_w, b_w, c_w = get_lc_parameters(dim, milkrecordings, model)
-            if max(dim) > 305:
+            if max(dim) &gt; 305:
                 t_range = np.arange(1, (max(dim) + 1))
                 y_w = wood_model(t_range, a_w, b_w, c_w)
             else:
@@ -250,7 +453,7 @@ def fit_lactation_curve(
 
         elif model == "wilmink":
             a_wil, b_wil, c_wil, k_wil = get_lc_parameters(dim, milkrecordings, model)
-            if max(dim) > 305:
+            if max(dim) &gt; 305:
                 t_range = np.arange(1, (max(dim) + 1))
                 y_wil = wilmink_model(t_range, a_wil, b_wil, c_wil, k_wil)
             else:
@@ -260,7 +463,7 @@ def fit_lactation_curve(
 
         elif model == "ali_schaeffer":
             a_as, b_as, c_as, d_as, k_as = get_lc_parameters(dim, milkrecordings, model)
-            if max(dim) > 305:
+            if max(dim) &gt; 305:
                 t_range = np.arange(1, (max(dim) + 1))
                 y_as = ali_schaeffer_model(t_range, a_as, b_as, c_as, d_as, k_as)
             else:
@@ -270,7 +473,7 @@ def fit_lactation_curve(
 
         elif model == "fischer":
             a_f, b_f, c_f = get_lc_parameters(dim, milkrecordings, model)
-            if max(dim) > 305:
+            if max(dim) &gt; 305:
                 t_range = np.arange(1, (max(dim) + 1))
                 y_f = fischer_model(t_range, a_f, b_f, c_f)
             else:
@@ -280,7 +483,7 @@ def fit_lactation_curve(
 
         elif model == "milkbot":
             a_mb, b_mb, c_mb, d_mb = get_lc_parameters(dim, milkrecordings, model)
-            if max(dim) > 305:
+            if max(dim) &gt; 305:
                 t_range = np.arange(1, (max(dim) + 1))
             else:
                 t_range = np.arange(1, 306)
@@ -298,7 +501,7 @@ def fit_lactation_curve(
                 parameters = bayesian_fit_milkbot_single_lactation(
                     dim, milkrecordings, key, parity, breed, continent
                 )
-                if max(dim) > 305:
+                if max(dim) &gt; 305:
                     t_range = np.arange(1, (max(dim) + 1))
                     y_mb_bay = milkbot_model(
                         t_range,
@@ -322,13 +525,22 @@ def fit_lactation_curve(
 
 
 def get_lc_parameters_least_squares(dim, milkrecordings, model="milkbot"):
-    """Fit lactation data to a lactation curve model and return the model parameters using least square estimation and frequentist statistics.
-    Input variables:
-    dim (int) = list of dim
-    milkrecordings (float) = list of milk recordings
-    model (str) = type of pre-defined model function, default = Wood model. Model name is all lowercase
+    """Fit lactation data and return model parameters (least squares; frequentist).
 
-    output: parameters as np.float in alphabetic order"""
+    This helper uses `scipy.optimize.least_squares` to fit the MilkBot model with bounds,
+    and returns the fitted parameters.
+
+    Args:
+        dim (int): List/array of DIM values.
+        milkrecordings (float): List/array of milk recordings (kg).
+        model (str): Pre-defined model name; currently used with "milkbot".
+
+    Returns:
+        Parameters `(a, b, c, d)` as `np.float` in alphabetic order.
+
+    Notes:
+        Prints optimizer diagnostics (success, message, parameters, etc.) to stdout.
+    """
     # check and prep input
     # check and prepare input
     inputs = validate_and_prepare_inputs(dim, milkrecordings, model=model)
@@ -382,13 +594,24 @@ def get_lc_parameters_least_squares(dim, milkrecordings, model="milkbot"):
 
 
 def get_lc_parameters(dim, milkrecordings, model="wood"):
-    """Fit lactation data to a lactation curve model and return the model parameters using frequetist statistics: sklearn minimize and curvefit
-    Input variables:
-    dim (int) = list of dim
-    milkrecordings (float) = list of milk recordings
-    model (str) = type of pre-defined model function, default = Wood model. Model name is all lowercase
+    """Fit lactation data to a model and return fitted parameters (frequentist).
 
-    output: parameters as np.float in alphabetic order"""
+    Depending on `model`, this uses `scipy.optimize.minimize` and/or
+    `scipy.optimize.curve_fit` with model-specific starting values and bounds.
+
+    Args:
+        dim (int): List/array of DIM values.
+        milkrecordings (float): List/array of milk recordings (kg).
+        model (str): One of "wood", "wilmink", "ali_schaeffer", "fischer", "milkbot".
+
+    Returns:
+        Fitted parameters as floats, in alphabetical order by parameter name:
+            - wood: (a, b, c)
+            - wilmink: (a, b, c, k) with k fixed at -0.05
+            - ali_schaeffer: (a, b, c, d, k)
+            - fischer: (a, b, c)
+            - milkbot: (a, b, c, d)
+    """
     # check and prepare input
     # check and prepare input
     inputs = validate_and_prepare_inputs(dim, milkrecordings, model=model)
@@ -447,9 +670,21 @@ def get_lc_parameters(dim, milkrecordings, model="wood"):
         return a_mb, b_mb, c_mb, d_mb
 
 
-def get_chen_priors(parity: int) -> dict:
+def get_chen_priors(parity: int) -&gt; dict:
     """
     Return Chen et al. priors in MilkBot v2.0 ND format.
+
+    Args:
+        parity: Lactation number (1, 2, or &gt;= 3).
+
+    Returns:
+        Dictionary with parameter priors:
+        - "scale": {"mean", "sd"}
+        - "ramp": {"mean", "sd"}
+        - "decay": {"mean", "sd"}
+        - "offset": {"mean", "sd"}
+        - "seMilk": Standard error of milk measurement.
+        - "milkUnit": Unit string (e.g., "kg").
     """
     if parity == 1:
         return {
@@ -471,7 +706,7 @@ def get_chen_priors(parity: int) -> dict:
             "milkUnit": "kg",
         }
 
-    # parity >= 3
+    # parity &gt;= 3
     return {
         "scale": {"mean": 48.41, "sd": 10.66},
         "ramp": {"mean": 22.54, "sd": 8.724},
@@ -484,14 +719,38 @@ def get_chen_priors(parity: int) -> dict:
 
 def bayesian_fit_milkbot_single_lactation(
     dim, milkrecordings, key: str, parity=3, breed="H", continent="USA"
-) -> dict:
+) -&gt; dict:
     """
     Fit a single lactation using the MilkBot API (v2.0).
 
-    continent:
-        - "USA"   → MilkBot USA priors
-        - "EU"    → MilkBot EU priors
-        - "CHEN"  → Chen et al. published priors
+    Args:
+        dim: List/array of DIM values.
+        milkrecordings: List/array of milk recordings (kg).
+        key: API key for MilkBot.
+        parity: Lactation number; values &gt;= 3 are treated as one group in priors.
+        breed: "H" (Holstein) or "J" (Jersey).
+        continent: Prior source:
+            - "USA"   → MilkBot USA priors
+            - "EU"    → MilkBot EU priors
+            - "CHEN"  → Chen et al. published priors
+
+    Returns:
+        Dictionary with fitted parameters and metadata:
+            {
+                "scale": float,
+                "ramp": float,
+                "decay": float,
+                "offset": float,
+                "nPoints": int
+            }
+
+    Raises:
+        requests.HTTPError: For unsuccessful HTTP response codes.
+        RuntimeError: If the response format is unexpected.
+
+    Notes:
+        - When `continent == "CHEN"`, Chen et al. priors are included in the request payload.
+        - EU calls use the GCP EU endpoint; others use `milkbot.com`.
     """
     # check and prepare input
     inputs = validate_and_prepare_inputs(
