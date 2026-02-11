@@ -1,0 +1,5 @@
+encryptionsalt: v1:u9hgvrZLnek=:v1:bK60VlNRYiKtfFXc:H7kVodD+Z6/iEQqoq1HaTNXYq3zjJQ==
+config:
+  azure-native:location: westeurope
+  lactationcurve:milkbotKey:
+    secure: v1:XGzAHJgdJPABFYz8:lm6TVNkIVjfS3mwXsM7vsDZU31fb9TxO62miz+Dyn44=

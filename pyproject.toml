@@ -1,36 +1,27 @@
 [project]
-name = "lactationcurve"
+name = "lactation-curve-core"
 version = "0.1.0"
-description = "Lactation curve fitting and analysis library"
-readme = "README.md"
+description = "Lactation curve core monorepo"
 requires-python = ">= 3.12, < 3.13"
-dependencies = [
-    "numpy>=2.4.0",
-    "pandas>=2.3.3",
-    "python-dotenv>=1.0.0",
-    "scipy>=1.16.3",
-    "sympy>=1.14.0",
-    "matplotlib>=3.10.8",
-    "requests>=2.32.5",
-]
+dependencies = []
+
+[tool.uv.sources]
+lactationcurve = { path = "packages/python/lactation", editable = true }
+
+[dependency-groups]
+dev = ["pytest>=8.0.0", "ruff>=0.1.0", "python-dotenv>=1.0.0", "lactationcurve"]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/lactationcurve"]
-
 [tool.ruff]
-target-version = "py311"
+target-version = "py312"
 line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+pythonpath = ["packages/python/lactation/src"]
 testpaths = ["tests"]
-
-[dependency-groups]
-dev = ["pytest>=8.0.0", "ruff>=0.1.0"]

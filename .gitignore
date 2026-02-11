@@ -4,7 +4,9 @@ __pycache__/
 build/
 dist/
 wheels/
+*.whl
 *.egg-info
+.python_packages/
 
 # Virtual environments
 .venv
@@ -13,4 +15,3 @@ wheels/
 # Testing and linting caches
 .pytest_cache/
 .ruff_cache/
-

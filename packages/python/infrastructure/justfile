@@ -1,0 +1,323 @@
+# Pulumi Infrastructure Commands for Lactation Curves
+
+# Paths relative to this justfile
+app_dir := "../../../apps/lactation_curves"
+lactation_dir := "../lactation"
+
+# Default recipe - show available commands
+default:
+    @just --list
+
+# Show current stack
+current:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Current stack:"
+    pulumi stack --show-name
+
+# Select dev stack
+stack-dev:
+    @echo "Switching to dev stack..."
+    pulumi stack select dev
+
+# Select prod stack
+stack-prod:
+    @echo "Switching to prod stack..."
+    pulumi stack select prod
+
+# Check Azure login status
+check-azure:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Checking Azure CLI login status..."
+    if az account show &>/dev/null; then
+        echo "Logged in to Azure"
+        echo ""
+        az account show --query "{Subscription:name, TenantId:tenantId, User:user.name}" -o table
+    else
+        echo "Not logged in to Azure"
+        echo "Please run: az login"
+        exit 1
+    fi
+
+# Build the lactationcurve wheel and pre-install all deps for Linux deployment
+build-app:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    echo "Resolving dependencies..."
+    (cd {{ lactation_dir }} && uv lock)
+    (cd {{ app_dir }} && uv lock)
+    echo ""
+
+    echo "Building lactationcurve wheel..."
+    (cd {{ lactation_dir }} && uv build)
+    echo ""
+
+    echo "Generating requirements.txt from uv.lock..."
+    (cd {{ app_dir }} && uv export --format requirements-txt --no-hashes --no-dev --no-emit-project > requirements.txt)
+    echo "Generated {{ app_dir }}/requirements.txt"
+    echo ""
+
+    # Pre-install all dependencies for Linux x86_64 (Azure Functions runtime).
+    # This avoids the slow/fragile remote Oryx build.
+    echo "Installing dependencies for Linux x86_64 into .python_packages/..."
+    rm -rf {{ app_dir }}/.python_packages
+    uv pip install \
+        --target {{ app_dir }}/.python_packages/lib/site-packages \
+        --python-platform linux \
+        --python-version 3.12 \
+        -r {{ app_dir }}/requirements.txt \
+        {{ lactation_dir }}/dist/lactationcurve-*.whl
+    echo ""
+
+    echo "Build complete. Ready for deployment."
+
+# Configure Pulumi from .env files and install dependencies
+configure:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    # Install Pulumi Python dependencies (creates .venv if needed)
+    echo "Installing infrastructure dependencies..."
+    uv sync
+    echo ""
+
+    CURRENT_STACK=$(pulumi stack --show-name)
+    echo "Configuring stack: ${CURRENT_STACK}"
+    echo ""
+
+    # Check if .env exists
+    if [[ ! -f .env ]]; then
+        echo "Error: .env file not found!"
+        echo "Please copy .env.example to .env and fill in values:"
+        echo "  cp .env.example .env"
+        exit 1
+    fi
+
+    # Load base .env
+    echo "Loading base configuration from .env..."
+    set -a
+    source .env
+    set +a
+
+    # Load stack-specific overrides if they exist
+    if [[ -f ".env.${CURRENT_STACK}" ]]; then
+        echo "Loading ${CURRENT_STACK}-specific configuration from .env.${CURRENT_STACK}..."
+        set -a
+        source ".env.${CURRENT_STACK}"
+        set +a
+    else
+        echo "No stack-specific .env.${CURRENT_STACK} file found (using base .env only)"
+    fi
+    echo ""
+
+    # Validate required variables
+    if [[ -z "${PULUMI_CONFIG_PASSPHRASE:-}" ]]; then
+        echo "Error: PULUMI_CONFIG_PASSPHRASE is required"
+        exit 1
+    fi
+
+    # Set Pulumi secrets
+    echo "Setting Pulumi secrets..."
+    export PULUMI_CONFIG_PASSPHRASE
+
+    if [[ -n "${MILKBOT_KEY:-}" ]]; then
+        pulumi config set --secret milkbotKey "${MILKBOT_KEY}"
+    fi
+
+    echo ""
+    echo "Pulumi configuration complete for stack: ${CURRENT_STACK}"
+    echo ""
+    echo "You can now run:"
+    echo "  just preview  - Preview infrastructure changes"
+    echo "  just deploy   - Deploy infrastructure to Azure"
+
+# Helper to load env vars (used by other recipes)
+[private]
+_load-env:
+    #!/usr/bin/env bash
+    # This is a no-op recipe; env loading happens in each recipe's script
+
+# Preview infrastructure changes
+preview:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    CURRENT_STACK=$(pulumi stack --show-name)
+
+    if [[ ! -f .env ]]; then
+        echo "Error: .env file not found! Run 'just configure' first."
+        exit 1
+    fi
+
+    set -a
+    source .env
+    [[ -f ".env.${CURRENT_STACK}" ]] && source ".env.${CURRENT_STACK}"
+    set +a
+
+    export PULUMI_CONFIG_PASSPHRASE
+
+    echo "Stack: ${CURRENT_STACK}"
+    echo "Previewing infrastructure changes..."
+    echo ""
+    pulumi preview
+
+# Deploy infrastructure + function code to Azure
+deploy:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    CURRENT_STACK=$(pulumi stack --show-name)
+
+    if [[ ! -f .env ]]; then
+        echo "Error: .env file not found! Run 'just configure' first."
+        exit 1
+    fi
+
+    set -a
+    source .env
+    [[ -f ".env.${CURRENT_STACK}" ]] && source ".env.${CURRENT_STACK}"
+    set +a
+
+    export PULUMI_CONFIG_PASSPHRASE
+
+    echo "Stack: ${CURRENT_STACK}"
+    echo ""
+
+    echo "=== Step 1: Deploying infrastructure ==="
+    echo ""
+    pulumi up
+
+    echo ""
+    echo "=== Step 2: Deploying function code ==="
+    echo ""
+
+    FUNC_APP_NAME=$(pulumi stack output function_app_name)
+    echo "Publishing to: ${FUNC_APP_NAME}"
+    (cd {{ app_dir }} && func azure functionapp publish "${FUNC_APP_NAME}" --python --no-build)
+
+    echo ""
+    echo "Deploy complete."
+
+# Deploy infrastructure only (no function code redeploy)
+deploy-infra:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    CURRENT_STACK=$(pulumi stack --show-name)
+
+    if [[ ! -f .env ]]; then
+        echo "Error: .env file not found! Run 'just configure' first."
+        exit 1
+    fi
+
+    set -a
+    source .env
+    [[ -f ".env.${CURRENT_STACK}" ]] && source ".env.${CURRENT_STACK}"
+    set +a
+
+    export PULUMI_CONFIG_PASSPHRASE
+
+    echo "Stack: ${CURRENT_STACK}"
+    echo "Deploying infrastructure only..."
+    echo ""
+    pulumi up
+
+# Deploy function code only (no infrastructure changes)
+deploy-functions:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    CURRENT_STACK=$(pulumi stack --show-name)
+
+    if [[ ! -f .env ]]; then
+        echo "Error: .env file not found! Run 'just configure' first."
+        exit 1
+    fi
+
+    set -a
+    source .env
+    [[ -f ".env.${CURRENT_STACK}" ]] && source ".env.${CURRENT_STACK}"
+    set +a
+
+    export PULUMI_CONFIG_PASSPHRASE
+
+    FUNC_APP_NAME=$(pulumi stack output function_app_name)
+    echo "Stack: ${CURRENT_STACK}"
+    echo "Publishing function code to: ${FUNC_APP_NAME}"
+    echo ""
+    (cd {{ app_dir }} && func azure functionapp publish "${FUNC_APP_NAME}" --python --no-build)
+
+# Destroy all infrastructure (with confirmation)
+destroy:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    CURRENT_STACK=$(pulumi stack --show-name)
+
+    if [[ ! -f .env ]]; then
+        echo "Error: .env file not found!"
+        exit 1
+    fi
+
+    set -a
+    source .env
+    [[ -f ".env.${CURRENT_STACK}" ]] && source ".env.${CURRENT_STACK}"
+    set +a
+
+    export PULUMI_CONFIG_PASSPHRASE
+
+    echo "Stack: ${CURRENT_STACK}"
+    echo "WARNING: This will destroy all infrastructure in ${CURRENT_STACK}!"
+    echo "Press Ctrl+C to cancel, or press Enter to continue..."
+    read
+
+    pulumi destroy
+
+# Show stack outputs
+outputs:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    CURRENT_STACK=$(pulumi stack --show-name)
+
+    if [[ ! -f .env ]]; then
+        echo "Error: .env file not found!"
+        exit 1
+    fi
+
+    set -a
+    source .env
+    [[ -f ".env.${CURRENT_STACK}" ]] && source ".env.${CURRENT_STACK}"
+    set +a
+
+    export PULUMI_CONFIG_PASSPHRASE
+
+    echo "Stack: ${CURRENT_STACK}"
+    echo ""
+    pulumi stack output
+
+# Refresh stack state
+refresh:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    CURRENT_STACK=$(pulumi stack --show-name)
+
+    if [[ ! -f .env ]]; then
+        echo "Error: .env file not found!"
+        exit 1
+    fi
+
+    set -a
+    source .env
+    [[ -f ".env.${CURRENT_STACK}" ]] && source ".env.${CURRENT_STACK}"
+    set +a
+
+    export PULUMI_CONFIG_PASSPHRASE
+
+    echo "Stack: ${CURRENT_STACK}"
+    echo "Refreshing stack state..."
+    echo ""
+    pulumi refresh
