@@ -3,7 +3,7 @@ name = "lactation-curve-core"
 version = "0.1.0"
 description = "Lactation curve core monorepo"
 requires-python = ">= 3.12, < 3.13"
-dependencies = []
+dependencies = ["lactationcurve>=0.1.0"]
 
 [tool.uv.sources]
 lactationcurve = { path = "packages/python/lactation", editable = true }

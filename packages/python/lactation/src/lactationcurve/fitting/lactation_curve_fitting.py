@@ -1,13 +1,12 @@
-
-''' 
+'''
 Lactation curve fitting module.
 
 This module provides functions for fitting lactation curve models to dairy cow
-lactation data and predicting milk yield over a standard horizon.
+lactation data and predicting milk yield.
 
 Pre-defined lactation curve models
 ----------------------------------
-- Models that can be fitted using frequentist statistics (numeric and least squares optimization):
+- Models that can be fitted using frequentist statistics (numeric or least squares optimization):
     - Wood
     - Wilmink
     - Ali & Schaeffer
@@ -55,7 +54,7 @@ Public functions
 
 Notes
 -----
-- Units: DIM in days, milk in kg.
+- Units: DIM in days, milk in kg or lbs.
 - Input validation and normalization are delegated to
   `lactationcurve.preprocessing.validate_and_prepare_inputs`.
 '''
@@ -406,12 +405,12 @@ def fit_lactation_curve(
         fitting (Str): "frequentist" (default) or "bayesian".
             Bayesian fitting is currently implemented only for "milkbot".
         breed (Str): "H" (Holstein, default) or "J" (Jersey). Only used for Bayesian.
-        parity (Int): Lactation number; all parities &gt;= 3 considered one group in priors (Bayesian).
+        parity (Int): Lactation number; all parities >= 3 considered one group in priors (Bayesian).
         continent (Str): Prior source for Bayesian, "USA" (default), "EU", or "CHEN".
         key (Str | None): API key for MilkBot (required when `fitting == "bayesian"`).
 
     Returns:
-        List/array of predicted milk yield for DIM 1–305 (or up to the maximum DIM if &gt; 305).
+        List/array of predicted milk yield for DIM 1–305 (or up to the maximum DIM if > 305).
 
     Raises:
         Exception: If an unknown model is requested (frequentist),
@@ -443,7 +442,7 @@ def fit_lactation_curve(
     if fitting == "frequentist":
         if model == "wood":
             a_w, b_w, c_w = get_lc_parameters(dim, milkrecordings, model)
-            if max(dim) &gt; 305:
+            if max(dim) > 305:
                 t_range = np.arange(1, (max(dim) + 1))
                 y_w = wood_model(t_range, a_w, b_w, c_w)
             else:
@@ -453,7 +452,7 @@ def fit_lactation_curve(
 
         elif model == "wilmink":
             a_wil, b_wil, c_wil, k_wil = get_lc_parameters(dim, milkrecordings, model)
-            if max(dim) &gt; 305:
+            if max(dim) > 305:
                 t_range = np.arange(1, (max(dim) + 1))
                 y_wil = wilmink_model(t_range, a_wil, b_wil, c_wil, k_wil)
             else:
@@ -463,7 +462,7 @@ def fit_lactation_curve(
 
         elif model == "ali_schaeffer":
             a_as, b_as, c_as, d_as, k_as = get_lc_parameters(dim, milkrecordings, model)
-            if max(dim) &gt; 305:
+            if max(dim) > 305:
                 t_range = np.arange(1, (max(dim) + 1))
                 y_as = ali_schaeffer_model(t_range, a_as, b_as, c_as, d_as, k_as)
             else:
@@ -473,7 +472,7 @@ def fit_lactation_curve(
 
         elif model == "fischer":
             a_f, b_f, c_f = get_lc_parameters(dim, milkrecordings, model)
-            if max(dim) &gt; 305:
+            if max(dim) > 305:
                 t_range = np.arange(1, (max(dim) + 1))
                 y_f = fischer_model(t_range, a_f, b_f, c_f)
             else:
@@ -483,7 +482,7 @@ def fit_lactation_curve(
 
         elif model == "milkbot":
             a_mb, b_mb, c_mb, d_mb = get_lc_parameters(dim, milkrecordings, model)
-            if max(dim) &gt; 305:
+            if max(dim) > 305:
                 t_range = np.arange(1, (max(dim) + 1))
             else:
                 t_range = np.arange(1, 306)
@@ -501,7 +500,7 @@ def fit_lactation_curve(
                 parameters = bayesian_fit_milkbot_single_lactation(
                     dim, milkrecordings, key, parity, breed, continent
                 )
-                if max(dim) &gt; 305:
+                if max(dim) > 305:
                     t_range = np.arange(1, (max(dim) + 1))
                     y_mb_bay = milkbot_model(
                         t_range,
@@ -538,8 +537,6 @@ def get_lc_parameters_least_squares(dim, milkrecordings, model="milkbot"):
     Returns:
         Parameters `(a, b, c, d)` as `np.float` in alphabetic order.
 
-    Notes:
-        Prints optimizer diagnostics (success, message, parameters, etc.) to stdout.
     """
     # check and prep input
     # check and prepare input
@@ -579,16 +576,6 @@ def get_lc_parameters_least_squares(dim, milkrecordings, model="milkbot"):
     # Extract parameters
     # ------------------------------
     a_mb, b_mb, c_mb, d_mb = res.x
-
-    # ------------------------------
-    # Debug / quality info
-    # ------------------------------
-    print("success:", res.success)
-    print("message:", res.message)
-    print("params:", a_mb, b_mb, c_mb, d_mb)
-    print("f(0) =", milkbot_model(0, a_mb, b_mb, c_mb, d_mb))
-    print("predicted peak:", np.max(milkbot_model(dim, a_mb, b_mb, c_mb, d_mb)))
-    print("measured max:", np.max(milkrecordings))
 
     return a_mb, b_mb, c_mb, d_mb
 
@@ -670,12 +657,12 @@ def get_lc_parameters(dim, milkrecordings, model="wood"):
         return a_mb, b_mb, c_mb, d_mb
 
 
-def get_chen_priors(parity: int) -&gt; dict:
+def get_chen_priors(parity: int) -> dict:
     """
     Return Chen et al. priors in MilkBot v2.0 ND format.
 
     Args:
-        parity: Lactation number (1, 2, or &gt;= 3).
+        parity: Lactation number (1, 2, or >= 3).
 
     Returns:
         Dictionary with parameter priors:
@@ -706,7 +693,7 @@ def get_chen_priors(parity: int) -&gt; dict:
             "milkUnit": "kg",
         }
 
-    # parity &gt;= 3
+    # parity >= 3
     return {
         "scale": {"mean": 48.41, "sd": 10.66},
         "ramp": {"mean": 22.54, "sd": 8.724},
@@ -719,7 +706,7 @@ def get_chen_priors(parity: int) -&gt; dict:
 
 def bayesian_fit_milkbot_single_lactation(
     dim, milkrecordings, key: str, parity=3, breed="H", continent="USA"
-) -&gt; dict:
+) -> dict:
     """
     Fit a single lactation using the MilkBot API (v2.0).
 
@@ -727,7 +714,7 @@ def bayesian_fit_milkbot_single_lactation(
         dim: List/array of DIM values.
         milkrecordings: List/array of milk recordings (kg).
         key: API key for MilkBot.
-        parity: Lactation number; values &gt;= 3 are treated as one group in priors.
+        parity: Lactation number; values >= 3 are treated as one group in priors.
         breed: "H" (Holstein) or "J" (Jersey).
         continent: Prior source:
             - "USA"   → MilkBot USA priors
