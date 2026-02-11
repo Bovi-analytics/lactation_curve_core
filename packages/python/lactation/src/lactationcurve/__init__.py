@@ -7,7 +7,6 @@ from .characteristics import (
     persistency_fitted_curve,
     persistency_milkbot,
     persistency_wood,
-    test_interval_method,
 )
 from .fitting import (
     ali_schaeffer_model,
@@ -70,5 +69,4 @@ __all__ = [
     "persistency_fitted_curve",
     "persistency_milkbot",
     "persistency_wood",
-    "test_interval_method",
 ]

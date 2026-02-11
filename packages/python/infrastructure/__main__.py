@@ -1,4 +1,4 @@
-"""Pulumi infrastructure for the Lactation Curves Function App.
+"""Pulumi infrastructure for the MilkBot Function App.
 
 Creates the following Azure resources:
   - Resource Group
@@ -29,13 +29,13 @@ from pulumi_azure_native import (
 config = pulumi.Config()
 stack = pulumi.get_stack()
 
-# Naming prefix based on stack (e.g., "lc-dev")
-prefix = f"lc-{stack}"
+# Naming prefix based on stack (e.g., "milkbot-dev")
+prefix = f"milkbot-{stack}"
 
 # Tags applied to all resources
 tags = {
     "Environment": stack,
-    "Project": "LactationCurves",
+    "Project": "MilkBot",
     "Owner": "Bovi",
     "ManagedBy": "Pulumi",
 }
@@ -153,18 +153,9 @@ function_app = web.WebApp(
             web.NameValuePairArgs(name="AzureWebJobsStorage", value=storage_connection_string),
             web.NameValuePairArgs(name="FUNCTIONS_WORKER_RUNTIME", value="python"),
             web.NameValuePairArgs(name="FUNCTIONS_EXTENSION_VERSION", value="~4"),
-            # Required for v2 programming model (function_app.py instead of function.json)
-            web.NameValuePairArgs(name="AzureWebJobsFeatureFlags", value="EnableWorkerIndexing"),
-            # Required for Linux Consumption plan — the worker process needs
-            # a file share even when using WEBSITE_RUN_FROM_PACKAGE.
-            web.NameValuePairArgs(
-                name="WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
-                value=storage_connection_string,
-            ),
-            web.NameValuePairArgs(
-                name="WEBSITE_CONTENTSHARE",
-                value=f"{prefix}-func-content",
-            ),
+            # Note: WEBSITE_CONTENTAZUREFILECONNECTIONSTRING and WEBSITE_CONTENTSHARE
+            # are managed by `func azure functionapp publish` — do not set them here
+            # or Pulumi and func will fight over them on every deploy.
             # Monitoring
             web.NameValuePairArgs(
                 name="APPINSIGHTS_INSTRUMENTATIONKEY",

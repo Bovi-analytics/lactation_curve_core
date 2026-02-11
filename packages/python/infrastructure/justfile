@@ -1,7 +1,7 @@
-# Pulumi Infrastructure Commands for Lactation Curves
+# Pulumi Infrastructure Commands for MilkBot
 
 # Paths relative to this justfile
-app_dir := "../../../apps/lactation_curves"
+app_dir := "../../../apps/milkbot"
 lactation_dir := "../lactation"
 
 # Default recipe - show available commands
@@ -195,24 +195,7 @@ deploy:
 
     FUNC_APP_NAME=$(pulumi stack output function_app_name)
     echo "Publishing to: ${FUNC_APP_NAME}"
-
-    # Retry loop: Azure may need time to propagate a newly created Function App.
-    MAX_RETRIES=3
-    RETRY_DELAY=30
-    for i in $(seq 1 $MAX_RETRIES); do
-        if (cd {{ app_dir }} && func azure functionapp publish "${FUNC_APP_NAME}" --python --no-build); then
-            break
-        fi
-        if [[ $i -lt $MAX_RETRIES ]]; then
-            echo ""
-            echo "Publish failed (attempt $i/$MAX_RETRIES). Retrying in ${RETRY_DELAY}s..."
-            sleep $RETRY_DELAY
-        else
-            echo ""
-            echo "Publish failed after $MAX_RETRIES attempts."
-            exit 1
-        fi
-    done
+    (cd {{ app_dir }} && func azure functionapp publish "${FUNC_APP_NAME}" --python --no-build)
 
     echo ""
     echo "Deploy complete."
