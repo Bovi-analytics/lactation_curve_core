@@ -195,7 +195,24 @@ deploy:
 
     FUNC_APP_NAME=$(pulumi stack output function_app_name)
     echo "Publishing to: ${FUNC_APP_NAME}"
-    (cd {{ app_dir }} && func azure functionapp publish "${FUNC_APP_NAME}" --python --no-build)
+
+    # Retry loop: Azure may need time to propagate a newly created Function App.
+    MAX_RETRIES=3
+    RETRY_DELAY=30
+    for i in $(seq 1 $MAX_RETRIES); do
+        if (cd {{ app_dir }} && func azure functionapp publish "${FUNC_APP_NAME}" --python --no-build); then
+            break
+        fi
+        if [[ $i -lt $MAX_RETRIES ]]; then
+            echo ""
+            echo "Publish failed (attempt $i/$MAX_RETRIES). Retrying in ${RETRY_DELAY}s..."
+            sleep $RETRY_DELAY
+        else
+            echo ""
+            echo "Publish failed after $MAX_RETRIES attempts."
+            exit 1
+        fi
+    done
 
     echo ""
     echo "Deploy complete."

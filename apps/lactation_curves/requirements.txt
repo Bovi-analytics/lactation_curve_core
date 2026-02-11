@@ -7,7 +7,7 @@ annotated-types==0.7.0
 anyio==4.12.1
     # via starlette
 azure-functions==1.24.0
-    # via milkbot-app
+    # via lactation-curves-app
 certifi==2026.1.4
     # via requests
 charset-normalizer==3.4.4
@@ -21,7 +21,7 @@ contourpy==1.3.3
 cycler==0.12.1
     # via matplotlib
 fastapi==0.128.8
-    # via milkbot-app
+    # via lactation-curves-app
 fonttools==4.61.1
     # via matplotlib
 h11==0.16.0
@@ -33,7 +33,7 @@ idna==3.11
 kiwisolver==1.4.9
     # via matplotlib
 lactationcurve==0.1.0
-    # via milkbot-app
+    # via lactation-curves-app
 markupsafe==3.0.3
     # via werkzeug
 matplotlib==3.10.8
@@ -50,7 +50,9 @@ numpy==2.4.2
 packaging==26.0
     # via matplotlib
 pandas==3.0.0
-    # via lactationcurve
+    # via
+    #   lactation-curves-app
+    #   lactationcurve
 pillow==12.1.1
     # via matplotlib
 pydantic==2.12.5
@@ -90,6 +92,6 @@ tzdata==2025.3 ; sys_platform == 'emscripten' or sys_platform == 'win32'
 urllib3==2.6.3
     # via requests
 uvicorn==0.40.0
-    # via milkbot-app
+    # via lactation-curves-app
 werkzeug==3.1.5
     # via azure-functions
