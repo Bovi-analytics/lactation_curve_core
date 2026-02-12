@@ -8,7 +8,7 @@ A toolkit for fitting **dairy cow lactation curves**, evaluating **lactation cur
 
 > **Initial authored:** 2025‑08‑12
 
-> **Updated:** 2026‑02‑11
+> **Updated:** 2026‑02‑12
 
 ---
 

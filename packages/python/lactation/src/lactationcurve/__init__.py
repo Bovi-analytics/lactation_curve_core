@@ -1,3 +1,6 @@
+"""Lactation curve modelling and fitting package."""
+
+
 from .characteristics import (
     calculate_characteristic,
     lactation_curve_characteristic_function,
