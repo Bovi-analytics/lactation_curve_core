@@ -1,6 +1,36 @@
-# Utility functions for the functions of the ICAR guideline on lactation curve analysis
-# Author: Meike van Leerdam
-# Date: 8 Jan 2026
+"""
+# Utility functions 
+Input validation and tabular schema normalization for lactation curve workflows.
+
+This module provides two small utilities that are used by
+`lactationcurve.fitting.lactation_curve_fitting` and by 'lactationcurve.characteristics.lactation_curve_characteristics' to ensure consistent input handling:
+
+1) `validate_and_prepare_inputs` consolidates routine checks for DIM and test‑day
+   milk records, normalizes optional options (e.g., fitting method, breed, priors),
+   drops rows with missing or non‑finite values, and returns a structured `PreparedInputs`
+   bundle. This keeps the core fitting and characteristic functions focused on their main logic, 
+   and ensures that all inputs are clean and consistent.
+
+2) `standardize_lactation_columns` aligns a flexible DataFrame schema to a small,
+   canonical set of column names (`DaysInMilk`, `MilkingYield`, `TestId`) and trims
+   records outside a user‑defined DIM horizon. This is handy prior to 305‑day
+   calculations and when users provide varied source column names. (currently not yet implemented)
+
+Design goals:
+- Keep pre‑flight checks and schema handling **centralized** so model‑fitting and
+  characteristic functions can assume clean, typed inputs.
+- Keep behavior predictable across modules without hard‑coding assumptions in the
+  fitting code.
+
+Conventions:
+- DIM is in days; milk yield is in kg or lbs.
+
+
+Author: Meike van Leerdam
+Last update: 13 feb 2026
+"""
+
+
 
 from dataclasses import dataclass
 
@@ -10,6 +40,23 @@ import pandas as pd
 
 @dataclass
 class PreparedInputs:
+    """Normalized, ready‑to‑fit inputs.
+
+    This container is returned by `validate_and_prepare_inputs` and is the single
+    hand‑off object expected by the fitting routines. Arrays are finite and 1‑dimensional;
+    categorical fields are lower/upper‑cased as appropriate and may be `None` if omitted.
+
+    Attributes:
+        dim: 1D NumPy array of day‑in‑milk values (finite; same length as `milkrecordings`).
+        milkrecordings: 1D NumPy array of test‑day milk yields aligned to `dim`.
+        model: Lowercased model identifier or `None` if not provided.
+        fitting: `"frequentist"` or `"bayesian"` (lowercased) or `None`.
+        breed: `"H"` or `"J"` or `None`.
+        parity: Lactation number as `int`, if provided; otherwise `None`.
+        continent: Prior source flag for Bayesian flows (`"USA"`, `"EU"`, `"CHEN"`), or `None`.
+        persistency_method: Either `"derived"` or `"literature"`, or `None`.
+        lactation_length: Integer horizon (e.g., 305), the string `"max"`, or `None`.
+    """
     dim: np.ndarray
     milkrecordings: np.ndarray
     model: str | None = None

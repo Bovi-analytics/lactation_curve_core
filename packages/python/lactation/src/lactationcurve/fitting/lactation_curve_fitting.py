@@ -527,7 +527,9 @@ def get_lc_parameters_least_squares(dim, milkrecordings, model="milkbot"):
     """Fit lactation data and return model parameters (least squares; frequentist).
 
     This helper uses `scipy.optimize.least_squares` to fit the MilkBot model with bounds,
-    and returns the fitted parameters.
+    and returns the fitted parameters. 
+    Currently implemented only for the MilkBot model, as it is more complex and benefits from the robust optimization approach. 
+    Other models can be fitted using `get_lc_parameters` with numerical optimisation, which is generally faster for simpler models.
 
     Args:
         dim (int): List/array of DIM values.
@@ -538,7 +540,6 @@ def get_lc_parameters_least_squares(dim, milkrecordings, model="milkbot"):
         Parameters `(a, b, c, d)` as `np.float` in alphabetic order.
 
     """
-    # check and prep input
     # check and prepare input
     inputs = validate_and_prepare_inputs(dim, milkrecordings, model=model)
 
