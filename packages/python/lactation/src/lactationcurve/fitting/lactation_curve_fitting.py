@@ -349,22 +349,6 @@ def milkbot_objective(par, x, y):
     """
     return np.sum((y - milkbot_model(x, *par)) ** 2)
 
-
-def milkbot_constraint(par, dim):
-    """Constraint helper for MilkBot optimization (non-negativity).
-
-    Args:
-        par: Parameter vector `(a, b, c, d)`.
-        dim: DIM values.
-
-    Returns:
-        The minimum predicted value across `dim`, suitable for inequality constraints.
-    """
-    a, b, c, d = par
-    preds = milkbot_model(dim, a, b, c, d)
-    return np.min(preds)
-
-
 def residuals_milkbot(par, x, y):
     """Residuals for least-squares fitting of the MilkBot model.
 
@@ -601,7 +585,6 @@ def get_lc_parameters(dim, milkrecordings, model="wood"):
             - milkbot: (a, b, c, d)
     """
     # check and prepare input
-    # check and prepare input
     inputs = validate_and_prepare_inputs(dim, milkrecordings, model=model)
 
     dim = inputs.dim
@@ -646,21 +629,16 @@ def get_lc_parameters(dim, milkrecordings, model="wood"):
         return a_f, b_f, c_f
 
     elif model == "milkbot":
-        mb_guess = [max(milkrecordings), 50.0, 30.0, 0.01]
+        mb_guess = [max(milkrecordings), 20.0, -0.7, 0.022]
         mb_bounds = [(1, 100), (1, 100), (-600, 300), (0.0001, 0.1)]
-        # constraint = {
-        # 'type': 'ineq',
-        # 'fun': lambda p: milkbot_constraint(p, dim)
-        # }
         mb_res = minimize(milkbot_objective, mb_guess, args=(dim, milkrecordings), bounds=mb_bounds)
-        #   constraints = constraint, method='SLSQP')
         a_mb, b_mb, c_mb, d_mb = mb_res.x
         return a_mb, b_mb, c_mb, d_mb
 
 
 def get_chen_priors(parity: int) -> dict:
     """
-    Return Chen et al. priors in MilkBot v2.0 ND format.
+    Return Chen et al. priors in MilkBot format.
 
     Args:
         parity: Lactation number (1, 2, or >= 3).
@@ -676,21 +654,21 @@ def get_chen_priors(parity: int) -> dict:
     """
     if parity == 1:
         return {
-            "scale": {"mean": 34.11, "sd": 6.891},
-            "ramp": {"mean": 29.96, "sd": 1.53},
+            "scale": {"mean": 34.11, "sd": 7},
+            "ramp": {"mean": 29.96, "sd": 3},
             "decay": {"mean": 0.001835, "sd": 0.000738},
-            "offset": {"mean": -0.5, "sd": 0.002},
-            "seMilk": 1.91,
+            "offset": {"mean": -0.5, "sd": 0.02},
+            "seMilk": 4,
             "milkUnit": "kg",
         }
 
     if parity == 2:
         return {
             "scale": {"mean": 44.26, "sd": 9.57},
-            "ramp": {"mean": 22.52, "sd": 0.9999},
+            "ramp": {"mean": 22.52, "sd": 3},
             "decay": {"mean": 0.002745, "sd": 0.000979},
-            "offset": {"mean": -0.78, "sd": 0.007},
-            "seMilk": 2.19,
+            "offset": {"mean": -0.78, "sd": 0.07},
+            "seMilk": 4,
             "milkUnit": "kg",
         }
 
@@ -700,7 +678,7 @@ def get_chen_priors(parity: int) -> dict:
         "ramp": {"mean": 22.54, "sd": 8.724},
         "decay": {"mean": 0.002997, "sd": 0.000972},
         "offset": {"mean": 0.0, "sd": 0.03},
-        "seMilk": 2.14,
+        "seMilk": 4,
         "milkUnit": "kg",
     }
 
@@ -709,7 +687,7 @@ def bayesian_fit_milkbot_single_lactation(
     dim, milkrecordings, key: str, parity=3, breed="H", continent="USA"
 ) -> dict:
     """
-    Fit a single lactation using the MilkBot API (v2.0).
+    Fit a single lactation using the MilkBot API.
 
     Args:
         dim: List/array of DIM values.
@@ -786,8 +764,8 @@ def bayesian_fit_milkbot_single_lactation(
             "returnInputData": False,
             "returnPath": False,
             "returnDiscriminatorPath": False,
-            "fitEngine": "AnnealingFitter@2.0",
-            "fitObjective": "MB2@1.0",
+            # "fitEngine": "AnnealingFitter@2.0", #comment out to use the default fitter 
+            # "fitObjective": "MB2@2.0",
             "preferredMilkUnit": "kg",
         },
     }
