@@ -1,7 +1,8 @@
 # Pulumi Infrastructure Commands for MilkBot
 
 # Paths relative to this justfile
-app_dir := "../../../apps/milkbot"
+milkbot_dir := "../../../apps/milkbot"
+lactation_curves_dir := "../../../apps/lactation_curves"
 lactation_dir := "../lactation"
 
 # Default recipe - show available commands
@@ -47,7 +48,7 @@ build-app:
 
     echo "Resolving dependencies..."
     (cd {{ lactation_dir }} && uv lock)
-    (cd {{ app_dir }} && uv lock)
+    (cd {{ milkbot_dir }} && uv lock)
     echo ""
 
     echo "Building lactationcurve wheel..."
@@ -55,19 +56,19 @@ build-app:
     echo ""
 
     echo "Generating requirements.txt from uv.lock..."
-    (cd {{ app_dir }} && uv export --format requirements-txt --no-hashes --no-dev --no-emit-project > requirements.txt)
-    echo "Generated {{ app_dir }}/requirements.txt"
+    (cd {{ milkbot_dir }} && uv export --format requirements-txt --no-hashes --no-dev --no-emit-project > requirements.txt)
+    echo "Generated {{ milkbot_dir }}/requirements.txt"
     echo ""
 
     # Pre-install all dependencies for Linux x86_64 (Azure Functions runtime).
     # This avoids the slow/fragile remote Oryx build.
     echo "Installing dependencies for Linux x86_64 into .python_packages/..."
-    rm -rf {{ app_dir }}/.python_packages
+    rm -rf {{ milkbot_dir }}/.python_packages
     uv pip install \
-        --target {{ app_dir }}/.python_packages/lib/site-packages \
+        --target {{ milkbot_dir }}/.python_packages/lib/site-packages \
         --python-platform linux \
         --python-version 3.12 \
-        -r {{ app_dir }}/requirements.txt \
+        -r {{ milkbot_dir }}/requirements.txt \
         {{ lactation_dir }}/dist/lactationcurve-*.whl
     echo ""
 
@@ -195,7 +196,7 @@ deploy:
 
     FUNC_APP_NAME=$(pulumi stack output function_app_name)
     echo "Publishing to: ${FUNC_APP_NAME}"
-    (cd {{ app_dir }} && func azure functionapp publish "${FUNC_APP_NAME}" --python)
+    (cd {{ milkbot_dir }} && func azure functionapp publish "${FUNC_APP_NAME}" --python)
 
     echo ""
     echo "Deploy complete."
@@ -224,7 +225,7 @@ deploy-infra:
     echo ""
     pulumi up
 
-# Deploy function code only (no infrastructure changes)
+# Deploy lactation_curves function code only (no infrastructure changes)
 deploy-functions:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -245,9 +246,34 @@ deploy-functions:
 
     FUNC_APP_NAME=$(pulumi stack output function_app_name)
     echo "Stack: ${CURRENT_STACK}"
-    echo "Publishing function code to: ${FUNC_APP_NAME}"
+    echo "Publishing lactation_curves to: ${FUNC_APP_NAME}"
     echo ""
-    (cd {{ app_dir }} && func azure functionapp publish "${FUNC_APP_NAME}" --python)
+    (cd {{ lactation_curves_dir }} && func azure functionapp publish "${FUNC_APP_NAME}" --python)
+
+# Deploy milkbot function code only (no infrastructure changes)
+deploy-functions-milkbot:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    CURRENT_STACK=$(pulumi stack --show-name)
+
+    if [[ ! -f .env ]]; then
+        echo "Error: .env file not found! Run 'just configure' first."
+        exit 1
+    fi
+
+    set -a
+    source .env
+    [[ -f ".env.${CURRENT_STACK}" ]] && source ".env.${CURRENT_STACK}"
+    set +a
+
+    export PULUMI_CONFIG_PASSPHRASE
+
+    FUNC_APP_NAME=$(pulumi stack output function_app_name)
+    echo "Stack: ${CURRENT_STACK}"
+    echo "Publishing milkbot to: ${FUNC_APP_NAME}"
+    echo ""
+    (cd {{ milkbot_dir }} && func azure functionapp publish "${FUNC_APP_NAME}" --python)
 
 # Destroy all infrastructure (with confirmation)
 destroy:
