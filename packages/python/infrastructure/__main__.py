@@ -3,23 +3,20 @@
 Creates the following Azure resources:
   - Resource Group
   - Storage Account (required backing store for Function App)
-  - Blob Container (deployment package storage for Flex Consumption)
   - Log Analytics Workspace (PerGB2018 - first 5 GB/month free via App Insights)
   - Application Insights (monitoring)
-  - App Service Plan (Flex Consumption FC1 tier - serverless)
+  - App Service Plan (Linux Consumption Y1 tier - serverless, free for first 1M requests/mo)
   - Function App (Python 3.12, ASGI wrapping FastAPI)
-  - Role Assignment (Storage Blob Data Contributor for managed identity)
 
 Deployment approach:
   Pulumi manages infrastructure only. App code is deployed separately using
   `func azure functionapp publish` (Azure Functions Core Tools). The Function
-  App runs from a deployment package stored in blob storage.
+  App uses Azure Files mounting for its content storage.
 """
 
 import pulumi
 from pulumi_azure_native import (
     applicationinsights,
-    authorization,
     operationalinsights,
     resources,
     storage,
@@ -90,17 +87,6 @@ storage_connection_string = pulumi.Output.all(
 )
 
 # ---------------------------------------------------------------------------
-# Blob Container (deployment package storage for Flex Consumption)
-# ---------------------------------------------------------------------------
-deployment_container = storage.BlobContainer(
-    "deployment-container",
-    resource_group_name=resource_group.name,
-    account_name=storage_account.name,
-    container_name="deployment-package",
-    public_access=storage.PublicAccess.NONE,
-)
-
-# ---------------------------------------------------------------------------
 # Log Analytics Workspace (PerGB2018 - pay-as-you-go, first 5 GB/month free via App Insights)
 # 31 days is the minimum retention for this SKU.
 # ---------------------------------------------------------------------------
@@ -128,23 +114,25 @@ app_insights = applicationinsights.Component(
 )
 
 # ---------------------------------------------------------------------------
-# App Service Plan (Flex Consumption - FC1 tier)
-# Serverless with per-second billing. Scales to zero when idle.
+# App Service Plan (Linux Consumption - Y1 Dynamic tier)
+# Free: first 1 million requests and 400,000 GB-s per month included.
+# Scales to zero when idle - you only pay for what you use.
 # ---------------------------------------------------------------------------
 app_service_plan = web.AppServicePlan(
     "consumption-plan",
     resource_group_name=resource_group.name,
     name=f"{prefix}-plan",
     sku=web.SkuDescriptionArgs(
-        tier="FlexConsumption",
-        name="FC1",
+        name="Y1",
+        tier="Dynamic",
     ),
+    kind="linux",
     reserved=True,  # Required for Linux
     tags=tags,
 )
 
 # ---------------------------------------------------------------------------
-# Function App (Flex Consumption, Python 3.12, ASGI/FastAPI)
+# Function App
 # ---------------------------------------------------------------------------
 milkbot_key = config.get_secret("milkbotKey") or ""
 
@@ -156,41 +144,20 @@ function_app = web.WebApp(
     reserved=True,
     server_farm_id=app_service_plan.id,
     https_only=True,
-    identity=web.ManagedServiceIdentityArgs(
-        type=web.ManagedServiceIdentityType.SYSTEM_ASSIGNED,
-    ),
-    function_app_config=web.FunctionAppConfigArgs(
-        deployment=web.FunctionsDeploymentArgs(
-            storage=web.FunctionsDeploymentStorageArgs(
-                type=web.FunctionsDeploymentStorageType.BLOB_CONTAINER,
-                value=pulumi.Output.all(
-                    storage_account.primary_endpoints,
-                    deployment_container.name,
-                ).apply(lambda args: f"{args[0]['blob']}{args[1]}"),
-                authentication=web.FunctionsDeploymentAuthenticationArgs(
-                    type=web.AuthenticationType.STORAGE_ACCOUNT_CONNECTION_STRING,
-                    storage_account_connection_string_name="AzureWebJobsStorage",
-                ),
-            ),
-        ),
-        runtime=web.FunctionsRuntimeArgs(
-            name=web.RuntimeName.PYTHON,
-            version="3.12",
-        ),
-        scale_and_concurrency=web.FunctionsScaleAndConcurrencyArgs(
-            instance_memory_mb=2048,
-            maximum_instance_count=100,
-        ),
-    ),
     site_config=web.SiteConfigArgs(
+        linux_fx_version="PYTHON|3.12",
         ftps_state=web.FtpsState.DISABLED,
         min_tls_version="1.2",
         app_settings=[
             # Azure Functions runtime config
-            # Note: FUNCTIONS_WORKER_RUNTIME and FUNCTIONS_EXTENSION_VERSION are
-            # managed automatically by Flex Consumption via function_app_config.
             web.NameValuePairArgs(name="AzureWebJobsStorage", value=storage_connection_string),
+            web.NameValuePairArgs(name="FUNCTIONS_WORKER_RUNTIME", value="python"),
+            web.NameValuePairArgs(name="FUNCTIONS_EXTENSION_VERSION", value="~4"),
+            # Required for Python v2 programming model (decorator-based function discovery)
             web.NameValuePairArgs(name="AzureWebJobsFeatureFlags", value="EnableWorkerIndexing"),
+            # Note: WEBSITE_CONTENTAZUREFILECONNECTIONSTRING and WEBSITE_CONTENTSHARE
+            # are managed by `func azure functionapp publish` — do not set them here
+            # or Pulumi and func will fight over them on every deploy.
             # Monitoring
             web.NameValuePairArgs(
                 name="APPLICATIONINSIGHTS_CONNECTION_STRING",
@@ -204,19 +171,6 @@ function_app = web.WebApp(
         ),
     ),
     tags=tags,
-)
-
-# ---------------------------------------------------------------------------
-# Role Assignment — Storage Blob Data Contributor for function app identity
-# Allows the function app to access the deployment blob container.
-# ---------------------------------------------------------------------------
-role_assignment = authorization.RoleAssignment(
-    "blob-contributor-role",
-    scope=storage_account.id,
-    principal_id=function_app.identity.apply(lambda i: i.principal_id),
-    principal_type=authorization.PrincipalType.SERVICE_PRINCIPAL,
-    # Storage Blob Data Contributor built-in role
-    role_definition_id="/providers/Microsoft.Authorization/roleDefinitions/ba92f5b4-2d11-453d-a403-e96b0029c9fe",
 )
 
 # ---------------------------------------------------------------------------

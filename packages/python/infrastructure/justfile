@@ -195,7 +195,7 @@ deploy:
 
     FUNC_APP_NAME=$(pulumi stack output function_app_name)
     echo "Publishing to: ${FUNC_APP_NAME}"
-    (cd {{ app_dir }} && func azure functionapp publish "${FUNC_APP_NAME}" --python --no-build)
+    (cd {{ app_dir }} && func azure functionapp publish "${FUNC_APP_NAME}" --python)
 
     echo ""
     echo "Deploy complete."
@@ -247,7 +247,7 @@ deploy-functions:
     echo "Stack: ${CURRENT_STACK}"
     echo "Publishing function code to: ${FUNC_APP_NAME}"
     echo ""
-    (cd {{ app_dir }} && func azure functionapp publish "${FUNC_APP_NAME}" --python --no-build)
+    (cd {{ app_dir }} && func azure functionapp publish "${FUNC_APP_NAME}" --python)
 
 # Destroy all infrastructure (with confirmation)
 destroy:
