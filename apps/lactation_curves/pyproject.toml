@@ -11,7 +11,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["ruff>=0.1.0", "basedpyright>=1.37.1"]
+dev = ["ruff>=0.1.0", "basedpyright>=1.37.1", "pytest>=8.0.0", "httpx>=0.27.0"]
 
 [build-system]
 requires = ["hatchling"]
