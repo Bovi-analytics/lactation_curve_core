@@ -1,9 +1,26 @@
-"""Shared fixtures for lactation_curves API tests."""
+"""Shared fixtures for lactation_curves API tests.
+
+Start the server first:  just run
+Then run tests:          just test-api
+
+Or test against deployed:
+  API_BASE_URL=https://milkbot-dev-func.azurewebsites.net just test-api
+"""
 
 import os
 
-import pytest
 import httpx
+import pytest
+
+@pytest.fixture
+def sample_data() -> dict[str, list[int] | list[float]]:
+    """Sample test-day milk recording data."""
+    return {
+        "dim": [10, 30, 60, 90, 120, 150, 200, 250, 305],
+        "milkrecordings": [
+            15.0, 25.0, 30.0, 28.0, 26.0, 24.0, 22.0, 20.0, 18.0,
+        ],
+    }
 
 
 @pytest.fixture
