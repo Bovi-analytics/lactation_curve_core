@@ -268,8 +268,12 @@ destroy:
 
     export PULUMI_CONFIG_PASSPHRASE
 
-    echo "Stack: ${CURRENT_STACK}"
-    echo "WARNING: This will destroy all infrastructure in ${CURRENT_STACK}!"
+    # Show subscription so you don't destroy the wrong one
+    SUBSCRIPTION=$(az account show --query "{Name:name, Id:id}" -o tsv 2>/dev/null || echo "NOT LOGGED IN")
+    echo "Azure subscription: ${SUBSCRIPTION}"
+    echo "Pulumi stack:       ${CURRENT_STACK}"
+    echo ""
+    echo "WARNING: This will destroy ALL infrastructure in stack '${CURRENT_STACK}'!"
     echo "Press Ctrl+C to cancel, or press Enter to continue..."
     read
 
