@@ -6,5 +6,5 @@ Date: November 4 2025
 
 """
 
-# from package.lactationcurve.scripts.test_interval_method_cp import test_interval_method
+# from package.lactationcurve.scripts.test_interval_method import test_interval_method
 pass
