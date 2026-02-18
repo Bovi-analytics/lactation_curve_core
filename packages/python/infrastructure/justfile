@@ -134,30 +134,10 @@ configure:
     echo "  just preview  - Preview infrastructure changes"
     echo "  just deploy   - Deploy infrastructure to Azure"
 
-# Helper to load env vars (used by other recipes)
-[private]
-_load-env:
-    #!/usr/bin/env bash
-    # This is a no-op recipe; env loading happens in each recipe's script
-
 # Preview infrastructure changes
 preview:
     #!/usr/bin/env bash
-    set -euo pipefail
-
-    CURRENT_STACK=$(pulumi stack --show-name)
-
-    if [[ ! -f .env ]]; then
-        echo "Error: .env file not found! Run 'just configure' first."
-        exit 1
-    fi
-
-    set -a
-    source .env
-    [[ -f ".env.${CURRENT_STACK}" ]] && source ".env.${CURRENT_STACK}"
-    set +a
-
-    export PULUMI_CONFIG_PASSPHRASE
+    source scripts/load-env.sh
 
     echo "Stack: ${CURRENT_STACK}"
     echo "Previewing infrastructure changes..."
@@ -166,59 +146,16 @@ preview:
 
 # Deploy infrastructure + function code to Azure
 deploy:
-    #!/usr/bin/env bash
-    set -euo pipefail
-
-    CURRENT_STACK=$(pulumi stack --show-name)
-
-    if [[ ! -f .env ]]; then
-        echo "Error: .env file not found! Run 'just configure' first."
-        exit 1
-    fi
-
-    set -a
-    source .env
-    [[ -f ".env.${CURRENT_STACK}" ]] && source ".env.${CURRENT_STACK}"
-    set +a
-
-    export PULUMI_CONFIG_PASSPHRASE
-
-    echo "Stack: ${CURRENT_STACK}"
-    echo ""
-
-    echo "=== Step 1: Deploying infrastructure ==="
-    echo ""
-    pulumi up
-
-    echo ""
-    echo "=== Step 2: Deploying function code ==="
-    echo ""
-
-    FUNC_APP_NAME=$(pulumi stack output function_app_name)
-    echo "Publishing to: ${FUNC_APP_NAME}"
-    (cd {{ milkbot_dir }} && func azure functionapp publish "${FUNC_APP_NAME}" --python)
-
-    echo ""
-    echo "Deploy complete."
+    @echo "=== Step 1: Deploying infrastructure ==="
+    just deploy-infra
+    @echo ""
+    @echo "=== Step 2: Deploying function code ==="
+    just deploy-functions
 
 # Deploy infrastructure only (no function code redeploy)
 deploy-infra:
     #!/usr/bin/env bash
-    set -euo pipefail
-
-    CURRENT_STACK=$(pulumi stack --show-name)
-
-    if [[ ! -f .env ]]; then
-        echo "Error: .env file not found! Run 'just configure' first."
-        exit 1
-    fi
-
-    set -a
-    source .env
-    [[ -f ".env.${CURRENT_STACK}" ]] && source ".env.${CURRENT_STACK}"
-    set +a
-
-    export PULUMI_CONFIG_PASSPHRASE
+    source scripts/load-env.sh
 
     echo "Stack: ${CURRENT_STACK}"
     echo "Deploying infrastructure only..."
@@ -228,21 +165,7 @@ deploy-infra:
 # Deploy lactation_curves function code only (no infrastructure changes)
 deploy-functions:
     #!/usr/bin/env bash
-    set -euo pipefail
-
-    CURRENT_STACK=$(pulumi stack --show-name)
-
-    if [[ ! -f .env ]]; then
-        echo "Error: .env file not found! Run 'just configure' first."
-        exit 1
-    fi
-
-    set -a
-    source .env
-    [[ -f ".env.${CURRENT_STACK}" ]] && source ".env.${CURRENT_STACK}"
-    set +a
-
-    export PULUMI_CONFIG_PASSPHRASE
+    source scripts/load-env.sh
 
     FUNC_APP_NAME=$(pulumi stack output function_app_name)
     echo "Stack: ${CURRENT_STACK}"
@@ -253,21 +176,7 @@ deploy-functions:
 # Deploy milkbot function code only (no infrastructure changes)
 deploy-functions-milkbot:
     #!/usr/bin/env bash
-    set -euo pipefail
-
-    CURRENT_STACK=$(pulumi stack --show-name)
-
-    if [[ ! -f .env ]]; then
-        echo "Error: .env file not found! Run 'just configure' first."
-        exit 1
-    fi
-
-    set -a
-    source .env
-    [[ -f ".env.${CURRENT_STACK}" ]] && source ".env.${CURRENT_STACK}"
-    set +a
-
-    export PULUMI_CONFIG_PASSPHRASE
+    source scripts/load-env.sh
 
     FUNC_APP_NAME=$(pulumi stack output function_app_name)
     echo "Stack: ${CURRENT_STACK}"
@@ -278,21 +187,7 @@ deploy-functions-milkbot:
 # Destroy all infrastructure (with confirmation)
 destroy:
     #!/usr/bin/env bash
-    set -euo pipefail
-
-    CURRENT_STACK=$(pulumi stack --show-name)
-
-    if [[ ! -f .env ]]; then
-        echo "Error: .env file not found!"
-        exit 1
-    fi
-
-    set -a
-    source .env
-    [[ -f ".env.${CURRENT_STACK}" ]] && source ".env.${CURRENT_STACK}"
-    set +a
-
-    export PULUMI_CONFIG_PASSPHRASE
+    source scripts/load-env.sh
 
     # Show subscription so you don't destroy the wrong one
     SUBSCRIPTION=$(az account show --query "{Name:name, Id:id}" -o tsv 2>/dev/null || echo "NOT LOGGED IN")
@@ -308,21 +203,7 @@ destroy:
 # Show stack outputs
 outputs:
     #!/usr/bin/env bash
-    set -euo pipefail
-
-    CURRENT_STACK=$(pulumi stack --show-name)
-
-    if [[ ! -f .env ]]; then
-        echo "Error: .env file not found!"
-        exit 1
-    fi
-
-    set -a
-    source .env
-    [[ -f ".env.${CURRENT_STACK}" ]] && source ".env.${CURRENT_STACK}"
-    set +a
-
-    export PULUMI_CONFIG_PASSPHRASE
+    source scripts/load-env.sh
 
     echo "Stack: ${CURRENT_STACK}"
     echo ""
@@ -331,21 +212,7 @@ outputs:
 # Refresh stack state
 refresh:
     #!/usr/bin/env bash
-    set -euo pipefail
-
-    CURRENT_STACK=$(pulumi stack --show-name)
-
-    if [[ ! -f .env ]]; then
-        echo "Error: .env file not found!"
-        exit 1
-    fi
-
-    set -a
-    source .env
-    [[ -f ".env.${CURRENT_STACK}" ]] && source ".env.${CURRENT_STACK}"
-    set +a
-
-    export PULUMI_CONFIG_PASSPHRASE
+    source scripts/load-env.sh
 
     echo "Stack: ${CURRENT_STACK}"
     echo "Refreshing stack state..."

@@ -1,16 +1,108 @@
-from typing import Literal
+import logging
+import time
+import uuid
+from typing import Literal, Self
 
 import numpy as np
-from fastapi import FastAPI
-from pydantic import BaseModel, Field
+import pandas as pd
+from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field, ValidationError, model_validator
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from lactationcurve import (
     calculate_characteristic,
     fit_lactation_curve,
     milkbot_model,
+    test_interval_method,
 )
 
+logger = logging.getLogger("lactation_curves")
+
 app = FastAPI(title="Lactation Curves API")
+
+
+class RequestLoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        request_id = str(uuid.uuid4())
+        start = time.perf_counter()
+        request.state.request_id = request_id
+
+        try:
+            response = await call_next(request)
+        except Exception:
+            duration_ms = (time.perf_counter() - start) * 1000
+            logger.exception(
+                "Unhandled error | %s %s | request_id=%s | %.0fms",
+                request.method, request.url.path, request_id, duration_ms,
+            )
+            return JSONResponse(
+                status_code=500,
+                content={"detail": "Internal server error", "request_id": request_id},
+            )
+
+        duration_ms = (time.perf_counter() - start) * 1000
+        response.headers["X-Request-ID"] = request_id
+
+        if response.status_code >= 500:
+            logger.error(
+                "%s %s -> %d | request_id=%s | %.0fms",
+                request.method, request.url.path,
+                response.status_code, request_id, duration_ms,
+            )
+        else:
+            logger.info(
+                "%s %s -> %d | request_id=%s | %.0fms",
+                request.method, request.url.path,
+                response.status_code, request_id, duration_ms,
+            )
+
+        return response
+
+
+app.add_middleware(RequestLoggingMiddleware)
+
+
+def _log_and_return_422(request: Request, errors: list) -> JSONResponse:
+    request_id = getattr(request.state, "request_id", "unknown")
+    logger.warning(
+        "Validation error | %s %s | request_id=%s | errors=%s",
+        request.method, request.url.path, request_id, errors,
+    )
+    return JSONResponse(
+        status_code=422,
+        content={"detail": jsonable_encoder(errors), "request_id": request_id},
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError,
+) -> JSONResponse:
+    return _log_and_return_422(request, exc.errors())
+
+
+@app.exception_handler(ValidationError)
+async def pydantic_validation_handler(
+    request: Request, exc: ValidationError,
+) -> JSONResponse:
+    return _log_and_return_422(request, exc.errors())
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    request_id = getattr(request.state, "request_id", "unknown")
+    logger.exception(
+        "Unhandled exception | %s %s | request_id=%s | %s: %s",
+        request.method, request.url.path, request_id,
+        type(exc).__name__, exc,
+    )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error", "request_id": request_id},
+    )
 
 DIM_DESC = (
     "Days in milk (DIM) for each test-day recording."
@@ -44,6 +136,10 @@ PERSISTENCY_DESC = (
 LACTATION_LENGTH_DESC = (
     "Lactation length in days for the calculation."
     " 305 (default), or a custom integer."
+)
+TEST_IDS_DESC = (
+    "Optional lactation/animal identifier per record."
+    " When omitted, all records are treated as one lactation."
 )
 
 
@@ -85,11 +181,13 @@ class FitRequest(BaseModel):
 
     dim: list[int] = Field(
         ...,
+        min_length=2,
         description=DIM_DESC,
         examples=[[10, 30, 60, 90, 120, 150, 200, 250, 305]],
     )
     milkrecordings: list[float] = Field(
         ...,
+        min_length=2,
         description=MILK_DESC,
         examples=[[15.0, 25.0, 30.0, 28.0, 26.0, 24.0, 22.0, 20.0, 18.0]],
     )
@@ -117,17 +215,30 @@ class FitRequest(BaseModel):
         description="Continent for priors: USA, EU, or CHEN.",
     )
 
+    @model_validator(mode="after")
+    def check_lengths_match(self) -> Self:
+        """Ensure dim and milkrecordings have the same length."""
+        if len(self.dim) != len(self.milkrecordings):
+            msg = (
+                f"dim and milkrecordings must have the same length, "
+                f"got {len(self.dim)} and {len(self.milkrecordings)}"
+            )
+            raise ValueError(msg)
+        return self
+
 
 class CharacteristicRequest(BaseModel):
     """Request body for computing a lactation characteristic."""
 
     dim: list[int] = Field(
         ...,
+        min_length=2,
         description=DIM_DESC,
         examples=[[10, 30, 60, 90, 120, 150, 200, 250, 305]],
     )
     milkrecordings: list[float] = Field(
         ...,
+        min_length=2,
         description=MILK_DESC,
         examples=[[15.0, 25.0, 30.0, 28.0, 26.0, 24.0, 22.0, 20.0, 18.0]],
     )
@@ -172,6 +283,56 @@ class CharacteristicRequest(BaseModel):
         ge=1,
         description=LACTATION_LENGTH_DESC,
     )
+
+    @model_validator(mode="after")
+    def check_lengths_match(self) -> Self:
+        """Ensure dim and milkrecordings have the same length."""
+        if len(self.dim) != len(self.milkrecordings):
+            msg = (
+                f"dim and milkrecordings must have the same length, "
+                f"got {len(self.dim)} and {len(self.milkrecordings)}"
+            )
+            raise ValueError(msg)
+        return self
+
+
+class TestIntervalRequest(BaseModel):
+    """Request body for the ICAR Test Interval Method."""
+
+    dim: list[int] = Field(
+        ...,
+        min_length=2,
+        description=DIM_DESC,
+        examples=[[10, 30, 60, 90, 120, 150, 200, 250, 305]],
+    )
+    milkrecordings: list[float] = Field(
+        ...,
+        min_length=2,
+        description=MILK_DESC,
+        examples=[[15.0, 25.0, 30.0, 28.0, 26.0, 24.0, 22.0, 20.0, 18.0]],
+    )
+    test_ids: list[int | str] | None = Field(
+        default=None,
+        description=TEST_IDS_DESC,
+        examples=[[1, 1, 1, 1, 1, 1, 1, 1, 1]],
+    )
+
+    @model_validator(mode="after")
+    def check_lengths_match(self) -> Self:
+        """Ensure dim and milkrecordings have the same length."""
+        if len(self.dim) != len(self.milkrecordings):
+            msg = (
+                f"dim and milkrecordings must have the same length, "
+                f"got {len(self.dim)} and {len(self.milkrecordings)}"
+            )
+            raise ValueError(msg)
+        if self.test_ids is not None and len(self.test_ids) != len(self.dim):
+            msg = (
+                f"test_ids must have the same length as dim, "
+                f"got {len(self.test_ids)} and {len(self.dim)}"
+            )
+            raise ValueError(msg)
+        return self
 
 
 @app.get("/")
@@ -242,3 +403,35 @@ def characteristic(
         lactation_length=request.lactation_length,
     )
     return {"value": float(value)}
+
+
+@app.post("/test-interval")
+def test_interval(
+    request: TestIntervalRequest,
+) -> dict[str, list[dict]]:
+    """Calculate 305-day milk yield using the ICAR Test Interval Method.
+
+    Uses the trapezoidal rule for interim test days and linear
+    projection for the start/end of lactation. Records with
+    DIM > 305 are excluded.
+
+    Returns one result per unique test_id (or one result when
+    test_ids is omitted).
+    """
+    data: dict[str, list] = {
+        "DaysInMilk": request.dim,
+        "MilkingYield": request.milkrecordings,
+    }
+    if request.test_ids is not None:
+        data["TestId"] = request.test_ids
+    df = pd.DataFrame(data)
+    result_df = test_interval_method(df)
+    return {
+        "results": [
+            {
+                "test_id": row["TestId"],
+                "total_305_yield": float(row["Total305Yield"]),
+            }
+            for _, row in result_df.iterrows()
+        ],
+    }

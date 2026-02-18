@@ -15,8 +15,16 @@ test:
     uv run pytest tests/ -v
 
 # Build the lactationcurve wheel
-build-wheel:
+build:
     cd packages/python/lactation && uv build
+
+# Publish the lactationcurve package to PyPI
+publish:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    set -a && source .env && set +a
+    rm -rf packages/python/lactation/dist
+    cd packages/python/lactation && uv build && uv publish
 
 # Build app for deployment
 build-app:
