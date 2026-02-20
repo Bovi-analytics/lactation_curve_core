@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+*.whl
+uv.lock
+local.settings.json
+tests/

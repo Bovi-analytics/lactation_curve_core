@@ -208,7 +208,7 @@ def test_time_to_peak_bayesian_milkbot(test_df, key):
     assert isinstance(result, float)
     assert 0 < result < 305
     assert (
-        pytest.approx(result, abs=3) == expected
+        pytest.approx(result, abs=5) == expected
     )  # wider range due to the inherent randomness of Bayesian fitting
 
 

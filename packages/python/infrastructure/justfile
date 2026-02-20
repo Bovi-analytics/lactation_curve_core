@@ -1,7 +1,8 @@
-# Pulumi Infrastructure Commands for Lactation Curves
+# Pulumi Infrastructure Commands for MilkBot
 
 # Paths relative to this justfile
-app_dir := "../../../apps/lactation_curves"
+milkbot_dir := "../../../apps/milkbot"
+lactation_curves_dir := "../../../apps/lactation_curves"
 lactation_dir := "../lactation"
 
 # Default recipe - show available commands
@@ -47,7 +48,7 @@ build-app:
 
     echo "Resolving dependencies..."
     (cd {{ lactation_dir }} && uv lock)
-    (cd {{ app_dir }} && uv lock)
+    (cd {{ milkbot_dir }} && uv lock)
     echo ""
 
     echo "Building lactationcurve wheel..."
@@ -55,19 +56,19 @@ build-app:
     echo ""
 
     echo "Generating requirements.txt from uv.lock..."
-    (cd {{ app_dir }} && uv export --format requirements-txt --no-hashes --no-dev --no-emit-project > requirements.txt)
-    echo "Generated {{ app_dir }}/requirements.txt"
+    (cd {{ milkbot_dir }} && uv export --format requirements-txt --no-hashes --no-dev --no-emit-project > requirements.txt)
+    echo "Generated {{ milkbot_dir }}/requirements.txt"
     echo ""
 
     # Pre-install all dependencies for Linux x86_64 (Azure Functions runtime).
     # This avoids the slow/fragile remote Oryx build.
     echo "Installing dependencies for Linux x86_64 into .python_packages/..."
-    rm -rf {{ app_dir }}/.python_packages
+    rm -rf {{ milkbot_dir }}/.python_packages
     uv pip install \
-        --target {{ app_dir }}/.python_packages/lib/site-packages \
+        --target {{ milkbot_dir }}/.python_packages/lib/site-packages \
         --python-platform linux \
         --python-version 3.12 \
-        -r {{ app_dir }}/requirements.txt \
+        -r {{ milkbot_dir }}/requirements.txt \
         {{ lactation_dir }}/dist/lactationcurve-*.whl
     echo ""
 
@@ -133,30 +134,10 @@ configure:
     echo "  just preview  - Preview infrastructure changes"
     echo "  just deploy   - Deploy infrastructure to Azure"
 
-# Helper to load env vars (used by other recipes)
-[private]
-_load-env:
-    #!/usr/bin/env bash
-    # This is a no-op recipe; env loading happens in each recipe's script
-
 # Preview infrastructure changes
 preview:
     #!/usr/bin/env bash
-    set -euo pipefail
-
-    CURRENT_STACK=$(pulumi stack --show-name)
-
-    if [[ ! -f .env ]]; then
-        echo "Error: .env file not found! Run 'just configure' first."
-        exit 1
-    fi
-
-    set -a
-    source .env
-    [[ -f ".env.${CURRENT_STACK}" ]] && source ".env.${CURRENT_STACK}"
-    set +a
-
-    export PULUMI_CONFIG_PASSPHRASE
+    source scripts/load-env.sh
 
     echo "Stack: ${CURRENT_STACK}"
     echo "Previewing infrastructure changes..."
@@ -165,111 +146,55 @@ preview:
 
 # Deploy infrastructure + function code to Azure
 deploy:
-    #!/usr/bin/env bash
-    set -euo pipefail
-
-    CURRENT_STACK=$(pulumi stack --show-name)
-
-    if [[ ! -f .env ]]; then
-        echo "Error: .env file not found! Run 'just configure' first."
-        exit 1
-    fi
-
-    set -a
-    source .env
-    [[ -f ".env.${CURRENT_STACK}" ]] && source ".env.${CURRENT_STACK}"
-    set +a
-
-    export PULUMI_CONFIG_PASSPHRASE
-
-    echo "Stack: ${CURRENT_STACK}"
-    echo ""
-
-    echo "=== Step 1: Deploying infrastructure ==="
-    echo ""
-    pulumi up
-
-    echo ""
-    echo "=== Step 2: Deploying function code ==="
-    echo ""
-
-    FUNC_APP_NAME=$(pulumi stack output function_app_name)
-    echo "Publishing to: ${FUNC_APP_NAME}"
-    (cd {{ app_dir }} && func azure functionapp publish "${FUNC_APP_NAME}" --python --no-build)
-
-    echo ""
-    echo "Deploy complete."
+    @echo "=== Step 1: Deploying infrastructure ==="
+    just deploy-infra
+    @echo ""
+    @echo "=== Step 2: Deploying function code ==="
+    just deploy-functions
 
 # Deploy infrastructure only (no function code redeploy)
 deploy-infra:
     #!/usr/bin/env bash
-    set -euo pipefail
-
-    CURRENT_STACK=$(pulumi stack --show-name)
-
-    if [[ ! -f .env ]]; then
-        echo "Error: .env file not found! Run 'just configure' first."
-        exit 1
-    fi
-
-    set -a
-    source .env
-    [[ -f ".env.${CURRENT_STACK}" ]] && source ".env.${CURRENT_STACK}"
-    set +a
-
-    export PULUMI_CONFIG_PASSPHRASE
+    source scripts/load-env.sh
 
     echo "Stack: ${CURRENT_STACK}"
     echo "Deploying infrastructure only..."
     echo ""
     pulumi up
 
-# Deploy function code only (no infrastructure changes)
+# Deploy lactation_curves function code only (no infrastructure changes)
 deploy-functions:
     #!/usr/bin/env bash
-    set -euo pipefail
-
-    CURRENT_STACK=$(pulumi stack --show-name)
-
-    if [[ ! -f .env ]]; then
-        echo "Error: .env file not found! Run 'just configure' first."
-        exit 1
-    fi
-
-    set -a
-    source .env
-    [[ -f ".env.${CURRENT_STACK}" ]] && source ".env.${CURRENT_STACK}"
-    set +a
-
-    export PULUMI_CONFIG_PASSPHRASE
+    source scripts/load-env.sh
 
     FUNC_APP_NAME=$(pulumi stack output function_app_name)
     echo "Stack: ${CURRENT_STACK}"
-    echo "Publishing function code to: ${FUNC_APP_NAME}"
+    echo "Publishing lactation_curves to: ${FUNC_APP_NAME}"
     echo ""
-    (cd {{ app_dir }} && func azure functionapp publish "${FUNC_APP_NAME}" --python --no-build)
+    (cd {{ lactation_curves_dir }} && func azure functionapp publish "${FUNC_APP_NAME}" --python)
+
+# Deploy milkbot function code only (no infrastructure changes)
+deploy-functions-milkbot:
+    #!/usr/bin/env bash
+    source scripts/load-env.sh
+
+    FUNC_APP_NAME=$(pulumi stack output function_app_name)
+    echo "Stack: ${CURRENT_STACK}"
+    echo "Publishing milkbot to: ${FUNC_APP_NAME}"
+    echo ""
+    (cd {{ milkbot_dir }} && func azure functionapp publish "${FUNC_APP_NAME}" --python)
 
 # Destroy all infrastructure (with confirmation)
 destroy:
     #!/usr/bin/env bash
-    set -euo pipefail
+    source scripts/load-env.sh
 
-    CURRENT_STACK=$(pulumi stack --show-name)
-
-    if [[ ! -f .env ]]; then
-        echo "Error: .env file not found!"
-        exit 1
-    fi
-
-    set -a
-    source .env
-    [[ -f ".env.${CURRENT_STACK}" ]] && source ".env.${CURRENT_STACK}"
-    set +a
-
-    export PULUMI_CONFIG_PASSPHRASE
-
-    echo "Stack: ${CURRENT_STACK}"
-    echo "WARNING: This will destroy all infrastructure in ${CURRENT_STACK}!"
+    # Show subscription so you don't destroy the wrong one
+    SUBSCRIPTION=$(az account show --query "{Name:name, Id:id}" -o tsv 2>/dev/null || echo "NOT LOGGED IN")
+    echo "Azure subscription: ${SUBSCRIPTION}"
+    echo "Pulumi stack:       ${CURRENT_STACK}"
+    echo ""
+    echo "WARNING: This will destroy ALL infrastructure in stack '${CURRENT_STACK}'!"
     echo "Press Ctrl+C to cancel, or press Enter to continue..."
     read
 
@@ -278,21 +203,7 @@ destroy:
 # Show stack outputs
 outputs:
     #!/usr/bin/env bash
-    set -euo pipefail
-
-    CURRENT_STACK=$(pulumi stack --show-name)
-
-    if [[ ! -f .env ]]; then
-        echo "Error: .env file not found!"
-        exit 1
-    fi
-
-    set -a
-    source .env
-    [[ -f ".env.${CURRENT_STACK}" ]] && source ".env.${CURRENT_STACK}"
-    set +a
-
-    export PULUMI_CONFIG_PASSPHRASE
+    source scripts/load-env.sh
 
     echo "Stack: ${CURRENT_STACK}"
     echo ""
@@ -301,21 +212,7 @@ outputs:
 # Refresh stack state
 refresh:
     #!/usr/bin/env bash
-    set -euo pipefail
-
-    CURRENT_STACK=$(pulumi stack --show-name)
-
-    if [[ ! -f .env ]]; then
-        echo "Error: .env file not found!"
-        exit 1
-    fi
-
-    set -a
-    source .env
-    [[ -f ".env.${CURRENT_STACK}" ]] && source ".env.${CURRENT_STACK}"
-    set +a
-
-    export PULUMI_CONFIG_PASSPHRASE
+    source scripts/load-env.sh
 
     echo "Stack: ${CURRENT_STACK}"
     echo "Refreshing stack state..."
