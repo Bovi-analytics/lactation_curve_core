@@ -130,19 +130,19 @@ def ali_schaeffer_model(t, a, b, c, d, k):
     Args:
         t: Time since calving in days (DIM). Use `t >= 1` to avoid `log(0)`.
         a: Intercept-like parameter (numerical).
-        b: Linear coefficient on scaled time `t/340` (numerical).
-        c: Quadratic coefficient on scaled time `t/340` (numerical).
-        d: Coefficient on `log(340/t)` (numerical).
-        k: Coefficient on `[log(340/t)]^2` (numerical).
+        b: Linear coefficient on scaled time `t/305` (numerical).
+        c: Quadratic coefficient on scaled time `t/305` (numerical).
+        d: Coefficient on `log(305/t)` (numerical).
+        k: Coefficient on `[log(305/t)]^2` (numerical).
 
     Returns:
         Predicted milk yield at `t`.
 
     Notes:
-        Uses `t_scaled = t / 340` and `log_term = ln(340 / t)`.
+        Uses `t_scaled = t / 305` and `log_term = ln(305 / t)`.
     """
-    t_scaled = t / 340
-    log_term = np.log(340 / t)
+    t_scaled = t / 305
+    log_term = np.log(305 / t)
     return a + b * t_scaled + c * (t_scaled**2) + d * log_term + k * (log_term**2)
 
 
