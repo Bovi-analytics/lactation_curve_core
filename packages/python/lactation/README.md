@@ -59,165 +59,6 @@ The package is organized into three main modules:
 2. `lactationcurve.characteristics`
 3. `lactationcurve.preprocessing`
 
-Below is a unified API reference for the core public functions.
-
----
-
-## 1. `lactationcurve/fitting/lactation_curve_fitting.py`
-
-### `fit_lactation_curve(dim, milkrecordings, model="wood", fitting="frequentist", breed="H", parity=3, continent="USA", key=None) -> np.ndarray`
-
-Fit a lactation curve model to DIM and milk-yield records and return predicted daily milk yield.
-
-**Args:**
-
-- `dim` (list[int] | np.ndarray): Days in milk.
-- `milkrecordings` (list[float] | np.ndarray): Milk yield per test day (kg or lbs).
-- `model` (str): `"wood"`, `"wilmink"`, `"ali_schaeffer"`, `"fischer"`, `"milkbot"`.
-- `fitting` (str): `"frequentist"` (default) or `"bayesian"` (MilkBot only).
-- `breed` (str): `"H"` or `"J"` (Bayesian only).
-- `parity` (int): Cow parity (≥3 treated as a single group for priors) (Bayesian only).
-- `continent` (str): `"USA" | "EU" | "CHEN"` (Bayesian only).
-- `key` (str | None): MilkBot API key for Bayesian fitting.
-
-**Returns:**
-
-- `np.ndarray`: Predicted daily yields for DIM 1–305 (or the highest DIM >305).
-
----
-
-### `get_lc_parameters(dim, milkrecordings, model="wood") -> tuple[float, ...]`
-
-Fit a lactation model using frequentist numerical optimization and return model parameters.
-
-**Supported model outputs:**
-
-- Wood → `(a, b, c)`
-- Wilmink → `(a, b, c, k)` with `k = -0.05`
-- Ali & Schaeffer → `(a, b, c, d, k)`
-- Fischer → `(a, b, c)`
-- MilkBot → `(a, b, c, d)`
-
----
-
-### `get_lc_parameters_least_squares(dim, milkrecordings, model="milkbot") -> tuple[float, float, float, float]`
-
-Return MilkBot parameters estimated using **least-squares** (constrained) optimization.
-
-**Returns:**
-
-- `(a, b, c, d)` in alphabetical order.
-
----
-
-### `bayesian_fit_milkbot_single_lactation(dim, milkrecordings, key, parity=3, breed="H", continent="USA") -> dict`
-
-Fit MilkBot parameters via **Bayesian estimation** using the official MilkBot API.
-
-**Args:**
-
-- `key` (str): Required API key.
-- `continent` (str): `"USA"`, `"EU"`, or `"CHEN"` (Chen et al. priors).
-
-**Returns (dict):**
-
-- `{"scale": float, "ramp": float, "decay": float, "offset": float, "nPoints": int}`
-
----
-
-## 2. `lactationcurve/characteristics/lactation_curve_characteristics.py`
-
-### `lactation_curve_characteristic_function(model="wood", characteristic=None, lactation_length=305)`
-
-Generate symbolic formulas and fast numeric functions for LCCs.
-
-**Models supported (14 total):**
-
-`milkbot, wood, wilmink, ali_schaeffer, fischer, brody, sikka, nelder, dhanoa, emmans, hayashi, rook, dijkstra, prasad`
-
-**Characteristics:**
-
-- `"time_to_peak"`
-- `"peak_yield"`
-- `"cumulative_milk_yield"`
-- `"persistency"`
-
-**Returns:**
-
-- `expr`: SymPy expression (or dict)
-- `params`: Tuple of SymPy parameter symbols
-- `func`: Lambdified numeric function
-
----
-
-### `calculate_characteristic(dim, milkrecordings, model, characteristic, fitting="frequentist", key=None, parity=3, breed="H", continent="USA", persistency_method="derived", lactation_length=305) -> float`
-
-Evaluate a lactation curve characteristic from actual test‑day data.
-
-**Args:**
-
-- `dim` (list[int]): Days in milk.
-- `milkrecordings` (list[float]): Test‑day yields (kg).
-- `model` (str): `"milkbot"`, `"wood"`, `"wilmink"`, `"ali_schaeffer"`, `"fischer"`.
-- `characteristic` (str): `"time_to_peak" | "peak_yield" | "cumulative_milk_yield" | "persistency"`.
-- `fitting` (str): `"frequentist"` or `"bayesian"`.
-- `persistency_method` (str): `"derived"` (default) or `"literature"`.
-- `lactation_length` (int | "max"): Horizon for cumulative yield or persistency.
-
-**Returns:**
-
-- `float`: The requested characteristic value.
-
-**Notes:**
-
-- Attempts symbolic formula first; uses numeric fallback when needed.
-- For `"literature"` persistency:
-
-  - Wood → `persistency_wood`
-  - MilkBot → `persistency_milkbot`
-
-Numeric fallback functions:
-
-- `numeric_time_to_peak(...)`
-- `numeric_peak_yield(...)`
-- `numeric_cumulative_yield(...)`
-- `persistency_fitted_curve(...)`
-
----
-
-## 3. `lactationcurve/characteristics0/test_interval_method.py`
-
-### `test_interval_method(df, days_in_milk_col=None, milking_yield_col=None, test_id_col=None, default_test_id=1) -> pd.DataFrame`
-
-Compute **305‑day milk yield** using the ICAR **Test Interval Method (TIM)**.
-
-**Args:**
-
-- `df` (pd.DataFrame): Must contain DIM and yield columns.
-- Column overrides or autodetection supported for:
-
-  - `"DaysInMilk"` → aliases: `"dim"`, `"testday"`, ...
-  - `"MilkingYield"` → aliases: `"yield"`, `"milkyield"`, ...
-  - `"TestId"` → aliases: `"id"`, `"animalid"`, ...
-
-**Returns:**
-
-- DataFrame with:
-
-  - `"TestId"`
-  - `"Total305Yield"`
-
-**Algorithm:**
-
-- Linear projection from DIM=0 → first test
-- Trapezoidal integration between test days
-- Linear projection from last test → DIM 305
-
-**Requirement:**
-
-- At least **two** data points per TestId (three recommended).
-
----
 
 ## Output Types Summary
 
@@ -245,6 +86,24 @@ Compute **305‑day milk yield** using the ICAR **Test Interval Method (TIM)**.
 * The helper `bayesian_fit_milkbot_single_lactation(...)` normalizes differing API responses.
 * The key can be requested by sending an email to Jim Ehrlich [jehrlich@MilkBot.com](mailto:jehrlich@MilkBot.com).
 * More information about the API can be found [here](https://api.milkbot.com/).
+
+# Citation 
+
+**Citing the lactationcurve package**
+
+If you use the `lactationcurve` package in your research, please consider citing it as follows:
+
+*van Leerdam, M. B., de Kok, D., Osei-Tete, J. A., & Hostens, M. (2026). Bovi-analytics/lactation_curve_core: v.0.1.0. (v.0.1.0).*
+
+*Zenodo. https://doi.org/10.5281/zenodo.18715145*
+
+
+If you also use the Bayesian fitting functionality that relies on the MilkBot API, please also cite the following paper:
+
+*Ehrlich, J.L., 2013. Quantifying inter-group variability in lactation curve shape and magnitude with the MilkBot® lactation model. PeerJ 1, e54.*
+
+*https://doi.org/10.7717/peerj.54*
+
 
 # License
 
