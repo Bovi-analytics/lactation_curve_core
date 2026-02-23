@@ -30,7 +30,10 @@ jobs:
 
       - name: Generate documentation
         working-directory: packages/python/lactation
-        run: uv run pdoc lactationcurve --output-dir site --docformat google
+        run: uv run pdoc lactationcurve \
+          --output-dir site \
+          --template-dir templates \
+          --docformat google
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
