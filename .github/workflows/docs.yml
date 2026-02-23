@@ -18,26 +18,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
 
-      - name: Install dependencies
-        run: |
-          pip install pdoc
-          pip install -e .
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install project with uv
+        working-directory: packages/python/lactation
+        run: uv sync
 
       - name: Generate documentation
-        run: |
-          pdoc packages/python/lactationcurve \
-              --output-dir docs \
-              --docformat google
+        working-directory: packages/python/lactation
+        run: uv run pdoc lactationcurve --output-dir site --docformat google
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs
+          path: packages/python/lactation/site
 
   deploy:
     needs: build-docs
