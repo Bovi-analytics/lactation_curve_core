@@ -1,0 +1,14 @@
+{% extends "default/module.html.jinja2" %}
+
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url('static/custom.css') }}">
+{{ super() }}
+{% endblock %}
+
+{% block header %}
+<div style="text-align:center; padding: 20px 0;">
+    <img src="{{ url('static/logo.png') }}" alt="Lab Logo" style="max-height:120px;">
+</div>
+{{ super() }}
+{% endblock %}
