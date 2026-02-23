@@ -98,6 +98,34 @@ If you use the `lactationcurve` package in your research, please consider citing
 *Zenodo. https://doi.org/10.5281/zenodo.18715145*
 
 
+BibTex:
+
+@software{van_leerdam_2026_lactation_curve_core,
+
+  author       = {van Leerdam, Meike Beatrijs and de Kok, D. and
+
+    Osei-Tete, J. A. and Hostens, M.},
+
+  title        = {Bovi-analytics/lactation\_curve\_core: v.0.1.0},
+
+  version      = {0.1.0},
+
+  year         = {2026},
+
+  publisher    = {Zenodo},
+
+  doi          = {10.5281/zenodo.18715145},
+
+  url          = {https://doi.org/10.5281/zenodo.18715145}
+
+}
+
+``
+
+
+A machine-readable citation is included in `CITATION.cff
+
+
 If you also use the Bayesian fitting functionality that relies on the MilkBot API, please also cite the following paper:
 
 *Ehrlich, J.L., 2013. Quantifying inter-group variability in lactation curve shape and magnitude with the MilkBot® lactation model. PeerJ 1, e54.*
