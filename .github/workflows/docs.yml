@@ -33,9 +33,10 @@ jobs:
         run: uv run pdoc lactationcurve \
           --output-dir site \
           --docformat google \
-          -- logo logo.png \
+          -- logo /logo.png \
           --logo-link https://bovi-analytics.org \
           --footer-text "Lactation Curve Package – Bovi-Analytics lab"
+          --template-directory templates
           
 
       - name: Upload artifact
