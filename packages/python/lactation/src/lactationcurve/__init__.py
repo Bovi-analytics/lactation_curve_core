@@ -107,6 +107,8 @@ https://doi.org/10.7717/peerj.54*
 [MIT License](https://github.com/Bovi-analytics/lactation_curve_core/blob/master/LICENSE)
 
 
+## Current version of the package 
+
 """
 
 
@@ -193,3 +195,23 @@ __all__ = ['fitting', 'characteristics', 'preprocessing']
 #     "persistency_wood",
 #     "test_interval_method",
 # ]
+
+# Expose package version (try metadata, fall back to a sensible dev string)
+try:
+  from importlib.metadata import version, PackageNotFoundError
+except Exception:
+  try:
+    from importlib_metadata import version, PackageNotFoundError  # type: ignore
+  except Exception:
+    version = None
+    PackageNotFoundError = Exception
+
+if version:
+  try:
+    __version__ = version("lactationcurve")
+  except PackageNotFoundError:
+    __version__ = "0+dev"
+else:
+  __version__ = "0+dev"
+
+__all__.append("__version__")
