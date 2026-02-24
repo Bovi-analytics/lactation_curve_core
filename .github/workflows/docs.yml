@@ -35,7 +35,7 @@ jobs:
           --docformat google \
           -- logo /logo.png \
           --logo-link https://bovi-analytics.org \
-          --footer-text "Lactation Curve Package – Bovi-Analytics lab"
+          --footer-text "Lactation Curve Package – Bovi-Analytics lab" \
           --template-directory templates
           
 
