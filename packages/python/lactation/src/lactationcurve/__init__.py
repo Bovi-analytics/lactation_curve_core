@@ -1,6 +1,6 @@
 """
 
-A package for fitting **dairy cow lactation curves**, evaluating **lactation curve characteristics (LCCs)** (time to peak, peak yield, cumulative yield, persistency), and computing **305‑day milk yield** using the **ICAR guideline**.
+A package for fitting **dairy animal lactation curves**, evaluating **lactation curve characteristics (LCCs)** (time to peak, peak yield, cumulative yield, persistency), and computing **305‑day milk yield** using the **ICAR guideline**.
 
 > **Contact:** Meike van Leerdam, mbv32@cornell.edu
 >

@@ -8,7 +8,7 @@
 
 /* Body styling */
 body {
-  background-color: #F9FBFD;
+  background-color: #FFF !important;
   font-family: "Helvetica Neue", Arial, sans-serif;
   line-height: 1.6;
   color: #222;
@@ -59,11 +59,6 @@ pre {
   overflow-x: auto;
 }
 
-/* Sidebar navigation */
-nav {
-  background-color: #FFFFFF;
-  border-right: 1px solid #E2E8F0;
-}
 
 /* Footer */
 footer {
@@ -72,20 +67,21 @@ footer {
   font-size: 0.9em;
 }
 
-/* Make function signatures stand out (pdoc uses .attr.function) */
-.pdoc .attr.function>.name {
+/* Make function signatures stand out */
+.doc-function>.doc-heading {
   font-weight: 600;
   font-size: 1.1em;
-  color: var(--pdoc-accent-color);
+  color: #053D6F;
 }
 
-.pdoc .attr.function {
+.doc-function {
   margin-top: 1.8em;
   padding-left: 1em;
   border-left: 4px solid #37B7EA;
 }
 
-/* Subtle blue accent for function signature area */
-.pdoc .attr.function .signature {
-  color: var(--pdoc-accent-color-dark);
+/* Subtle blue accent line on left */
+.doc-function {
+  border-left: 3px solid #37B7EA;
+  padding-left: 1em;
 }
