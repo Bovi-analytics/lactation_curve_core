@@ -8,7 +8,7 @@ A package for fitting **dairy cow lactation curves**, evaluating **lactation cur
 
 > **Initial authored:** 2025‑08‑12
 
-> **Updated:** 2026‑02‑19
+> **Updated:** 2026‑02‑24
 
 ---
 
@@ -28,6 +28,8 @@ Fischer: Simple exponential decay model.
 Additional models available for a.o. symbolic LCC derivations:
 **Brody** ,  **Sikka** ,  **Nelder** ,  **Dhanoa** ,  **Emmans** ,  **Hayashi** ,  **Rook** ,  **Dijkstra** ,  **Prasad** .
 
+---
+
 ## Model Formulas
 
 * **Wood** : `y(t) = a * t^b * exp(-c * t)`
@@ -37,6 +39,8 @@ Additional models available for a.o. symbolic LCC derivations:
   `y(t) = a + b*t_scaled + c*t_scaled^2 + d*L + k*L^2`
 * **Fischer** : `y(t) = a - b*t - a*exp(-c*t)`
 * **MilkBot** : `y(t) = a * (1 - exp((c - t)/b) / 2) * exp(-d*t)`
+
+---
 
 ## Features
 
@@ -51,6 +55,8 @@ Additional models available for a.o. symbolic LCC derivations:
 - Input validation/normalization via `validate_and_prepare_inputs`
 - Caching of symbolic expressions for performance
 
+---
+
 ## API Overview
 
 The package is organized into three main modules:
@@ -59,6 +65,7 @@ The package is organized into three main modules:
 2. `lactationcurve.characteristics`
 3. `lactationcurve.preprocessing`
 
+---
 
 ## Output Types Summary Of Most Important Functions
 
@@ -78,6 +85,7 @@ The package is organized into three main modules:
 
 | `test_interval_method` | DataFrame with 305‑day totals |
 
+---
 
 ## Bayesian Fitting (MilkBot API)
 
@@ -87,6 +95,8 @@ The package is organized into three main modules:
 * The helper `bayesian_fit_milkbot_single_lactation(...)` normalizes differing API responses.
 * The key can be requested by sending an email to Jim Ehrlich [jehrlich@MilkBot.com](mailto:jehrlich@MilkBot.com).
 * More information about the API can be found in the [API documentation](https://api.milkbot.com/), or in the corresponding [paper](https://peerj.com/articles/54/#MainContent).
+
+---
 
 ## Citing the lactationcurve package
 
@@ -101,11 +111,14 @@ If you also use the Bayesian fitting functionality that relies on the MilkBot AP
 *Ehrlich, J.L., 2013. Quantifying inter-group variability in lactation curve shape and magnitude with the MilkBot® lactation model. PeerJ 1, e54. 
 https://doi.org/10.7717/peerj.54*
 
+---
 
 ## License
 
 [MIT License](https://github.com/Bovi-analytics/lactation_curve_core/blob/master/LICENSE)
 
+
+---
 
 ## Current version of the package 
 
