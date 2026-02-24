@@ -31,7 +31,7 @@ jobs:
       - name: Generate documentation with pdoc
         working-directory: packages/python/lactation
         run: |
-          uv run pdoc -vv lactationcurve \
+          uv run pdoc lactationcurve \
             --output-dir site \
             --docformat google \
             --logo logo.png \
