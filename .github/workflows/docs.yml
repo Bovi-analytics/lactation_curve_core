@@ -21,22 +21,27 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v3
 
-      - name: Set up Python
+      - name: Set up Python 3.12 (via uv)
         run: uv python install 3.12
 
       - name: Install project with uv
         working-directory: packages/python/lactation
         run: uv sync
 
-      - name: Generate documentation
+      - name: Generate documentation with pdoc
         working-directory: packages/python/lactation
-        run: uv run pdoc lactationcurve \
-          --output-dir site \
-          --docformat google \
-          -- logo logo.png \
-          --logo-link https://bovi-analytics.org \
-          --footer-text "Lactation Curve Package – Bovi-Analytics lab"
-          
+        run: |
+          uv run pdoc lactationcurve \
+            --output-dir site \
+            --docformat google \
+            --logo https://raw.githubusercontent.com/Bovi-analytics/lactation_curve_core/master/packages/python/lactation/site/logo.png \
+            --logo-link https://bovi-analytics.org \
+            --footer-text "Lactation Curve Package – Bovi-Analytics lab" \
+            --template-directory templates
+
+      # Recommended: configure Pages for static site metadata (baseURL, etc.)
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
