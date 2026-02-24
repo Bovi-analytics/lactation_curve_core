@@ -1,6 +1,6 @@
 # Repo to house the lactation curve package and the lactation curve fitting api 
 
-[lactationcurve package docuementation](https://bovi-analytics.github.io/lactation_curve_core/lactationcurve.html "lactationcurve package website")
+[lactationcurve package documentation](https://bovi-analytics.github.io/lactation_curve_core/lactationcurve.html "lactationcurve package website")
 
 [Readme lactationcurve package](packages/python/lactation/README.md "readme lactationcurve package ")
 
