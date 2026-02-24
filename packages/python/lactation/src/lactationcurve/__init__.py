@@ -89,27 +89,22 @@ The package is organized into three main modules:
 * More information about the API can be found in the [API documentation](https://api.milkbot.com/), or in the corresponding [paper](https://peerj.com/articles/54/#MainContent).
 
 ## Citing the lactationcurve package
-## Citing the lactationcurve package
 
 If you use the `lactationcurve` package in your research, please consider citing it as follows:
 
 *van Leerdam, M. B., de Kok, D., Osei-Tete, J. A., & Hostens, M. (2026). Bovi-analytics/lactation_curve_core: v.0.1.0. (v.0.1.0). 
 Zenodo. https://doi.org/10.5281/zenodo.18715145*
-*van Leerdam, M. B., de Kok, D., Osei-Tete, J. A., & Hostens, M. (2026). Bovi-analytics/lactation_curve_core: v.0.1.1. (v.0.1.1). 
-Zenodo. https://doi.org/10.5281/zenodo.18715145*
+
 
 If you also use the Bayesian fitting functionality that relies on the MilkBot API, please also cite the following paper:
 
 *Ehrlich, J.L., 2013. Quantifying inter-group variability in lactation curve shape and magnitude with the MilkBot® lactation model. PeerJ 1, e54. 
 https://doi.org/10.7717/peerj.54*
-*Ehrlich, J.L., 2013. Quantifying inter-group variability in lactation curve shape and magnitude with the MilkBot® lactation model. PeerJ 1, e54. 
-https://doi.org/10.7717/peerj.54*
 
-## License
+
 ## License
 
 [MIT License](https://github.com/Bovi-analytics/lactation_curve_core/blob/master/LICENSE)
-
 
 
 """
