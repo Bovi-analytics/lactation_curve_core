@@ -102,9 +102,7 @@ BibTex:
 
 @software{van_leerdam_2026_lactation_curve_core,
 
-  author       = {van Leerdam, Meike Beatrijs and de Kok, D. and
-
-    Osei-Tete, J. A. and Hostens, M.},
+  author       = {van Leerdam, Meike Beatrijs and de Kok, D. and Osei-Tete, J. A. and Hostens, M.},
 
   title        = {Bovi-analytics/lactation\_curve\_core: v.0.1.0},
 
