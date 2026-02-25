@@ -16,3 +16,5 @@ wheels/
 .pytest_cache/
 .ruff_cache/
 
+#meike's test files
+tests/lactationcurve/test_dotenv.py

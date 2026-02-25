@@ -20,6 +20,7 @@ from .lactation_curve_fitting import (
     sikka_model,
     wilmink_model,
     wood_model,
+    build_prior,
 )
 
 __all__ = [
@@ -42,4 +43,5 @@ __all__ = [
     "sikka_model",
     "wilmink_model",
     "wood_model",
+    "build_prior",
 ]

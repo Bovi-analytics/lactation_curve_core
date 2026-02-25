@@ -54,20 +54,23 @@ Public functions
 
 Notes
 -----
-- Units: DIM in days, milk in kg or lbs.
+- Units: DIM in days, milk in kg or lb.
 - Input validation and normalization are delegated to
   `lactationcurve.preprocessing.validate_and_prepare_inputs`.
+- Bayesian fitting for the MilkBot model is performed via the MilkBot API, which requires an API key and accepts additional parameters for breed, parity, continent, and custom priors.
+- For information on the fitting API see https://api.milkbot.com/ or contact Jim Ehrlich, DVM: jehrlich@MilkBot.com
 '''
 
 # packages
+from typing import Any
 import numpy as np
+from pandas.core.generic import T
 import requests
 from scipy.optimize import curve_fit, least_squares, minimize
 from lactationcurve.preprocessing import validate_and_prepare_inputs
 
-
 # --- Models ---
-def milkbot_model(t, a, b, c, d):
+def milkbot_model(t, a, b, c, d) -> float:
     """MilkBot lactation curve model.
 
     Args:
@@ -86,7 +89,7 @@ def milkbot_model(t, a, b, c, d):
     return a * (1 - np.exp((c - t) / b) / 2) * np.exp(-d * t)
 
 
-def wood_model(t, a, b, c):
+def wood_model(t, a, b, c) -> float:
     """Wood lactation curve model.
 
     Args:
@@ -104,7 +107,7 @@ def wood_model(t, a, b, c):
     return a * (t**b) * np.exp(-c * t)
 
 
-def wilmink_model(t, a, b, c, k=-0.05):
+def wilmink_model(t, a, b, c, k=-0.05)-> float:
     """Wilmink lactation curve model.
 
     Args:
@@ -124,7 +127,7 @@ def wilmink_model(t, a, b, c, k=-0.05):
     return a + b * t + c * np.exp(k * t)
 
 
-def ali_schaeffer_model(t, a, b, c, d, k):
+def ali_schaeffer_model(t, a, b, c, d, k)-> float:
     """Ali & Schaeffer lactation curve model.
 
     Args:
@@ -146,7 +149,7 @@ def ali_schaeffer_model(t, a, b, c, d, k):
     return a + b * t_scaled + c * (t_scaled**2) + d * log_term + k * (log_term**2)
 
 
-def fischer_model(t, a, b, c):
+def fischer_model(t, a, b, c) -> float:
     """Fischer lactation curve model.
 
     Args:
@@ -161,7 +164,7 @@ def fischer_model(t, a, b, c):
     return a - b * t - a * np.exp(-c * t)
 
 
-def brody_model(t, a, k):
+def brody_model(t, a, k) -> float:
     """Brody lactation curve model.
 
     Args:
@@ -175,7 +178,7 @@ def brody_model(t, a, k):
     return a * np.exp(-k * t)
 
 
-def sikka_model(t, a, b, c):
+def sikka_model(t, a, b, c) -> float:
     """Sikka lactation curve model.
 
     Args:
@@ -190,7 +193,7 @@ def sikka_model(t, a, b, c):
     return a * np.exp(b * t - c * t**2)
 
 
-def nelder_model(t, a, b, c):
+def nelder_model(t, a, b, c) -> float:
     """Nelder lactation curve model.
 
     Args:
@@ -208,7 +211,7 @@ def nelder_model(t, a, b, c):
     return t / (a + b * t + c * t**2)
 
 
-def dhanoa_model(t, a, b, c):
+def dhanoa_model(t, a, b, c) -> float:
     """Dhanoa lactation curve model.
 
     Args:
@@ -226,7 +229,7 @@ def dhanoa_model(t, a, b, c):
     return a * t ** (b * c) * np.exp(-c * t)
 
 
-def emmans_model(t, a, b, c, d):
+def emmans_model(t, a, b, c, d) -> float:
     """Emmans lactation curve model.
 
     Args:
@@ -245,7 +248,7 @@ def emmans_model(t, a, b, c, d):
     return a * np.exp(-np.exp(d - b * t)) * np.exp(-c * t)
 
 
-def hayashi_model(t, a, b, c, d):
+def hayashi_model(t, a, b, c, d) -> float:
     """Hayashi lactation curve model.
 
     Args:
@@ -264,7 +267,7 @@ def hayashi_model(t, a, b, c, d):
     return b * (np.exp(-t / c) - np.exp(-t / (a * c)))
 
 
-def rook_model(t, a, b, c, d):
+def rook_model(t, a, b, c, d) -> float:
     """Rook lactation curve model.
 
     Args:
@@ -283,7 +286,7 @@ def rook_model(t, a, b, c, d):
     return a * (1 / (1 + b / (c + t))) * np.exp(-d * t)
 
 
-def dijkstra_model(t, a, b, c, d):
+def dijkstra_model(t, a, b, c, d) -> float:
     """Dijkstra lactation curve model.
 
     Args:
@@ -302,7 +305,7 @@ def dijkstra_model(t, a, b, c, d):
     return a * np.exp((b * (1 - np.exp(-c * t)) / c) - d * t)
 
 
-def prasad_model(t, a, b, c, d):
+def prasad_model(t, a, b, c, d) -> float:
     """Prasad lactation curve model.
 
     Args:
@@ -322,7 +325,7 @@ def prasad_model(t, a, b, c, d):
 
 
 # objectives for minimize
-def wood_objective(par, x, y):
+def wood_objective(par, x, y) -> float:
     """Objective function (sum of squared errors) for the Wood model.
 
     Args:
@@ -336,7 +339,7 @@ def wood_objective(par, x, y):
     return np.sum((y - wood_model(x, *par)) ** 2)
 
 
-def milkbot_objective(par, x, y):
+def milkbot_objective(par, x, y) -> float:
     """Objective function (sum of squared errors) for the MilkBot model.
 
     Args:
@@ -349,7 +352,7 @@ def milkbot_objective(par, x, y):
     """
     return np.sum((y - milkbot_model(x, *par)) ** 2)
 
-def residuals_milkbot(par, x, y):
+def residuals_milkbot(par, x, y) -> np.ndarray:
     """Residuals for least-squares fitting of the MilkBot model.
 
     Args:
@@ -371,8 +374,10 @@ def fit_lactation_curve(
     breed="H",
     parity=3,
     continent="USA",
+    custom_priors=None,
     key=None,
-):
+    milk_unit="kg"
+) -> np.ndarray:
     """Fit lactation data to a lactation curve model and return predictions.
 
     Depending on `fitting`:
@@ -389,9 +394,19 @@ def fit_lactation_curve(
         fitting (Str): "frequentist" (default) or "bayesian".
             Bayesian fitting is currently implemented only for "milkbot".
         breed (Str): "H" (Holstein, default) or "J" (Jersey). Only used for Bayesian.
-        parity (Int): Lactation number; all parities >= 3 considered one group in priors (Bayesian).
-        continent (Str): Prior source for Bayesian, "USA" (default), "EU", or "CHEN".
-        key (Str | None): API key for MilkBot (required when `fitting == "bayesian"`).
+        parity (Int): Lactation number; all parities >= 3 considered one group in priors.
+            Only used for Bayesian.
+        continent (Str): priors chosen by MilkBot API based on continent averages, "USA" (default), "EU".
+            Only used for Bayesian.
+        custom_priors (Dict | str | None): Custom prior distributions for Bayesian fitting. 
+            If a dict is provided, it must be a dictionary of prior distributions for each parameter in the model. Set the correct dictionary using the `build_prior` helper function. 
+            If the string "CHEN" is provided, the default Chen et al. priors are used.
+            Only used for Bayesian.
+        key = Str: API key for MilkBot API (required for Bayesian fitting). 
+            Only used for Bayesian.
+        milk_unit (Str): Unit of milk yield measurements. Must be either "kg" or "lb". Default is "kg".
+            Only used for Bayesian.
+
 
     Returns:
         List/array of predicted milk yield for DIM 1–305 (or up to the maximum DIM if > 305).
@@ -413,6 +428,8 @@ def fit_lactation_curve(
         breed=breed,
         parity=parity,
         continent=continent,
+        custom_priors=custom_priors,
+        milk_unit=milk_unit
     )
 
     dim = inputs.dim
@@ -422,6 +439,8 @@ def fit_lactation_curve(
     breed = inputs.breed
     parity = inputs.parity
     continent = inputs.continent
+    custom_priors = inputs.custom_priors
+    milk_unit = inputs.milk_unit
 
     if fitting == "frequentist":
         if model == "wood":
@@ -482,7 +501,7 @@ def fit_lactation_curve(
                 raise Exception("Key needed to use Bayesian fitting engine milkbot")
             else:
                 parameters = bayesian_fit_milkbot_single_lactation(
-                    dim, milkrecordings, key, parity, breed, continent
+                    dim, milkrecordings, key, parity, breed, custom_priors, continent, milk_unit
                 )
                 if max(dim) > 305:
                     t_range = np.arange(1, (max(dim) + 1))
@@ -507,7 +526,7 @@ def fit_lactation_curve(
             raise Exception("Bayesian fitting is currently only implemented for milkbot models")
 
 
-def get_lc_parameters_least_squares(dim, milkrecordings, model="milkbot"):
+def get_lc_parameters_least_squares(dim, milkrecordings, model="milkbot") -> tuple[float, float, float, float]:
     """Fit lactation data and return model parameters (least squares; frequentist).
 
     This helper uses `scipy.optimize.least_squares` to fit the MilkBot model with bounds,
@@ -565,7 +584,7 @@ def get_lc_parameters_least_squares(dim, milkrecordings, model="milkbot"):
     return a_mb, b_mb, c_mb, d_mb
 
 
-def get_lc_parameters(dim, milkrecordings, model="wood"):
+def get_lc_parameters(dim, milkrecordings, model="wood")  -> tuple[float, ...]:
     """Fit lactation data to a model and return fitted parameters (frequentist).
 
     Depending on `model`, this uses `scipy.optimize.minimize` and/or
@@ -683,8 +702,38 @@ def get_chen_priors(parity: int) -> dict:
     }
 
 
+
+def build_prior(
+    scale_mean: float,
+    scale_sd: float,
+    ramp_mean: float,
+    ramp_sd: float,
+    decay_mean: float,
+    decay_sd: float,
+    offset_mean: float,
+    offset_sd: float,
+    se_milk: float = 4
+) -> dict:
+    return {
+        "scale": {"mean": scale_mean, "sd": scale_sd},
+        "ramp": {"mean": ramp_mean, "sd": ramp_sd},
+        "decay": {"mean": decay_mean, "sd": decay_sd},
+        "offset": {"mean": offset_mean, "sd": offset_sd},
+        "seMilk": se_milk
+    }
+
+
+
+
 def bayesian_fit_milkbot_single_lactation(
-    dim, milkrecordings, key: str, parity=3, breed="H", continent="USA"
+    dim,
+    milkrecordings,
+    key: str,
+    parity=3,
+    breed="H",
+    custom_priors: dict | str | None = None,
+    continent="USA",
+    milk_unit="kg"    
 ) -> dict:
     """
     Fit a single lactation using the MilkBot API.
@@ -695,10 +744,13 @@ def bayesian_fit_milkbot_single_lactation(
         key: API key for MilkBot.
         parity: Lactation number; values >= 3 are treated as one group in priors.
         breed: "H" (Holstein) or "J" (Jersey).
-        continent: Prior source:
-            - "USA"   → MilkBot USA priors
-            - "EU"    → MilkBot EU priors
+        custom_priors:
             - "CHEN"  → Chen et al. published priors
+            - dict    → Custom priors in MilkBot format (overrides `continent`)
+        continent: priors used by MilkBot API for fitting; options:
+            - "USA"   → MilkBot USA priors
+            - "EU"    → MilkBot EU priors > estimates lower milk production 
+       
 
     Returns:
         Dictionary with fitted parameters and metadata:
@@ -720,7 +772,7 @@ def bayesian_fit_milkbot_single_lactation(
     """
     # check and prepare input
     inputs = validate_and_prepare_inputs(
-        dim, milkrecordings, breed=breed, parity=parity, continent=continent
+        dim, milkrecordings, breed=breed, parity=parity, custom_priors=custom_priors, continent=continent, milk_unit=milk_unit
     )
 
     dim = inputs.dim
@@ -728,6 +780,8 @@ def bayesian_fit_milkbot_single_lactation(
     breed = inputs.breed
     parity = inputs.parity
     continent = inputs.continent
+    custom_priors: dict | str | None = inputs.custom_priors
+    milk_unit = inputs.milk_unit
 
     # -----------------------------
     # Select server (USA vs EU)
@@ -766,15 +820,19 @@ def bayesian_fit_milkbot_single_lactation(
             "returnDiscriminatorPath": False,
             # "fitEngine": "AnnealingFitter@2.0", #comment out to use the default fitter 
             # "fitObjective": "MB2@2.0",
-            "preferredMilkUnit": "kg",
+            "preferredMilkUnit": milk_unit,
         },
     }
 
     # -----------------------------
-    # Add priors only if Chen
+    # Add priors if provided or when using Chen et al. priors
     # -----------------------------
-    if continent == "CHEN":
+    if custom_priors == 'CHEN':
         payload["priors"] = get_chen_priors(parity)
+
+    elif custom_priors is not None:
+        payload["priors"] = custom_priors
+      
 
     # -----------------------------
     # Call API
@@ -805,3 +863,12 @@ def bayesian_fit_milkbot_single_lactation(
         "offset": fitted["offset"],
         "nPoints": len(points),
     }
+
+
+def get_milkbot_version() -> None:
+    """Get the current version of the MilkBot API."""
+    r = requests.get(url="https://milkbot.com/version")
+    print(r.json())
+
+
+

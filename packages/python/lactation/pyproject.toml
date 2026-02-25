@@ -1,6 +1,6 @@
 [project]
 name = "lactationcurve"
-version = "0.1.1"
+version = "0.1.2"
 license = "MIT"
 description = "Lactation curve fitting and analysis library"
 readme = "README.md"
@@ -20,12 +20,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = [
-    "pytest>=8.0.0",
-    "ruff>=0.1.0",
-    "python-dotenv>=1.0.0",
-    "pdoc>=16.0.0",
-]
+dev = ["pytest>=8.0.0", "ruff>=0.1.0", "python-dotenv>=1.0.0", "pdoc>=16.0.0"]
 
 [project.urls]
 Repository = "https://github.com/Bovi-analytics/lactation-curves"

@@ -33,6 +33,7 @@ Author: Meike van Leerdam
 Last update: 11-feb-2025
 """
 
+
 import numpy as np
 from numpy import ndarray
 from sympy import (
@@ -54,12 +55,12 @@ from lactationcurve.fitting import (
     bayesian_fit_milkbot_single_lactation,
     fit_lactation_curve,
     get_lc_parameters,
+    build_prior
 )
 from lactationcurve.preprocessing import validate_and_prepare_inputs
 
-
 # safe guard for extreme expressions or weird results
-def is_valid_sympy_expr(expr):
+def is_valid_sympy_expr(expr) -> bool:
     """Check whether a SymPy expression looks safe to lambdify.
 
     The validation rejects expressions that contain infinities, NaNs, or an
@@ -90,7 +91,7 @@ def is_valid_sympy_expr(expr):
 _LCC_CACHE = {}
 
 
-def lactation_curve_characteristic_function(model='wood', characteristic=None, lactation_length=305):
+def lactation_curve_characteristic_function(model='wood', characteristic=None, lactation_length=305) -> tuple:
     """Build (or fetch from cache) a symbolic expression and fast numeric function for an LCC.
 
     This function derives the requested **lactation curve characteristic** for a given
@@ -289,8 +290,8 @@ def lactation_curve_characteristic_function(model='wood', characteristic=None, l
 
 
 def calculate_characteristic(dim, milkrecordings, model='wood', characteristic='cumulative_milk_yield',
-                             fitting='frequentist', key=None, parity=3, breed='H', continent='USA',
-                             persistency_method='derived', lactation_length=305):
+                             fitting='frequentist', key=None, parity=3, breed='H', continent='USA', custom_priors=None, milk_unit='kg',
+                             persistency_method='derived', lactation_length=305) -> float:
     """Evaluate a lactation curve characteristic from observed test-day data.
 
     This function fits the requested model (frequentist or Bayesian via MilkBot),
@@ -307,7 +308,11 @@ def calculate_characteristic(dim, milkrecordings, model='wood', characteristic='
         key (str | None): API key for MilkBot Bayesian fitting.
         parity (Int): Parity of the cow; values above 3 are considered as 3 (Bayesian).
         breed (str): 'H' (Holstein) or 'J' (Jersey) (Bayesian).
-        continent (str): 'USA', 'EU', or 'CHEN' (Bayesian).
+        custom_priors: provide your own priors for Bayesian fitting.
+            provide as dictionary using build_prior() function to create the priors in the right format.
+            Alternative use priors from the literature provided by the string command 'CHEN'
+        milk_unit: Unit of milk recordings ('kg' or 'lb') for Bayesian fitting.
+        continent (str): 'USA' or 'EU' (Bayesian).
         persistency_method (str): 'derived' (average slope after peak; default) or 'literature'
             (only for Wood and MilkBot).
         lactation_length (Int | str): Horizon for persistency calculation:
@@ -329,6 +334,8 @@ def calculate_characteristic(dim, milkrecordings, model='wood', characteristic='
         breed=breed,
         parity=parity,
         continent=continent,
+        custom_priors=custom_priors,
+        milk_unit=milk_unit,
         persistency_method=persistency_method,
         lactation_length=lactation_length
     )
@@ -340,6 +347,8 @@ def calculate_characteristic(dim, milkrecordings, model='wood', characteristic='
     breed: str | None = inputs.breed
     parity: int | None = inputs.parity
     continent: str | None = inputs.continent
+    custom_priors = inputs.custom_priors
+    milk_unit = inputs.milk_unit
     persistency_method: str | None = inputs.persistency_method
     lactation_length: int | str | None = inputs.lactation_length
 
@@ -404,7 +413,7 @@ def calculate_characteristic(dim, milkrecordings, model='wood', characteristic='
                 if key is None:
                     raise Exception('Key needed to use Bayesian fitting engine MilkBot')
                 else:
-                    fitted_params_bayes = bayesian_fit_milkbot_single_lactation(dim, milkrecordings, key, parity, breed, continent)
+                    fitted_params_bayes = bayesian_fit_milkbot_single_lactation(dim, milkrecordings, key = key, parity = parity, breed=breed, custom_priors = custom_priors, continent=continent, milk_unit=milk_unit)
                     fitted_params_bayes = fitted_params_bayes['scale'], fitted_params_bayes['ramp'], fitted_params_bayes['offset'], fitted_params_bayes['decay']
 
                     if characteristic != 'persistency':
@@ -422,7 +431,7 @@ def calculate_characteristic(dim, milkrecordings, model='wood', characteristic='
                             else:
                                 lactation_length = 305
                             value = persistency_fitted_curve(dim, milkrecordings, model, fitting='bayesian',
-                                                             key=key, parity=parity, breed=breed, continent=continent,
+                                                             key=key, parity=parity, breed=breed, custom_priors=custom_priors, milk_unit=milk_unit, continent=continent,
                                                              lactation_length=lactation_length)
 
                         else:
@@ -438,7 +447,7 @@ def calculate_characteristic(dim, milkrecordings, model='wood', characteristic='
 
 # also define numeric approaches as back up if symbolic functions fail or throw invalid results
 def numeric_time_to_peak(dim, milkrecordings, model, fitting='frequentist', key=None, parity=3,
-                         breed='H', continent='USA') -> int:
+                         breed='H', custom_priors=None, milk_unit='kg', continent='USA') -> int:
     """Compute time to peak using a numeric approach.
 
     Fits the curve (frequentist or Bayesian), evaluates the predicted yields,
@@ -452,13 +461,18 @@ def numeric_time_to_peak(dim, milkrecordings, model, fitting='frequentist', key=
         key: API key for MilkBot (Bayesian).
         parity: Parity for Bayesian fitting.
         breed: Breed for Bayesian fitting ('H' or 'J').
-        continent: Prior source for Bayesian ('USA', 'EU', 'CHEN').
+        custom_priors: provide your own priors for Bayesian fitting.
+            provide as dictionary using build_prior() function to create the priors in the right format.
+            Alternative use priors from the literature provided by the string command 'CHEN'
+        milk_unit: Unit of milk recordings ('kg' or 'lb') for Bayesian fitting.
+        continent: Prior source for Bayesian ('USA', 'EU').
+
 
     Returns:
         int: DIM at which the curve attains its maximum (1-indexed).
     """
     # Fit the curve to get predicted milk yields
-    yields = fit_lactation_curve(dim, milkrecordings, model, fitting=fitting, key=key, parity=parity, breed=breed, continent=continent)
+    yields = fit_lactation_curve(dim, milkrecordings, model, fitting=fitting, key=key, parity=parity, breed=breed, custom_priors=custom_priors, milk_unit=milk_unit, continent=continent)
     # Find the index of the peak yield
     peak_idx = np.argmax(yields)
     # Return the corresponding DIM
@@ -487,7 +501,7 @@ def numeric_cumulative_yield(dim, milkrecordings, model, fitting='frequentist', 
 
 
 def numeric_peak_yield(dim, milkrecordings, model, fitting='frequentist', key=None, parity=3,
-                       breed='H', continent='USA') -> float:
+                       breed='H', custom_priors=None, milk_unit='kg', continent='USA') -> float:
     """Compute peak yield numerically from the fitted curve.
 
     Args:
@@ -504,7 +518,7 @@ def numeric_peak_yield(dim, milkrecordings, model, fitting='frequentist', key=No
         float: Maximum predicted milk yield.
     """
     # Fit the curve to get predicted milk yields
-    yields = fit_lactation_curve(dim, milkrecordings, model, fitting=fitting, key=key, parity=parity, breed=breed, continent=continent)
+    yields = fit_lactation_curve(dim, milkrecordings, model, fitting=fitting, key=key, parity=parity, breed=breed, custom_priors=custom_priors, milk_unit=milk_unit, continent=continent)
     # Find the peak yield
     peak_yield = np.max(yields)
     return peak_yield
@@ -536,7 +550,7 @@ def persistency_milkbot(d) -> float:
 
 
 def persistency_fitted_curve(dim, milkrecordings, model, fitting='frequentist', key=None, parity=3,
-                             breed='H', continent='USA', lactation_length=305) -> float:
+                             breed='H', custom_priors=None, milk_unit='kg', continent='USA', lactation_length=305) -> float:
     """Persistency as the average slope after peak until end of lactation (numeric).
 
     This is the default approach because symbolic derivation is not feasible for
@@ -552,6 +566,10 @@ def persistency_fitted_curve(dim, milkrecordings, model, fitting='frequentist', 
         key: API key (only for Bayesian fitting).
         parity: Parity of the cow; values above 3 treated as 3 (Bayesian).
         breed: 'H' or 'J' (Bayesian).
+        custom_priors: provide your own priors for Bayesian fitting.
+            provide as dictionary using build_prior() function to create the priors in the right format.
+            Alternative use priors from the literature provided by the string command 'CHEN'
+        milk_unit: Unit of milk recordings ('kg' or 'lb') for Bayesian fitting.
         continent: 'USA', 'EU', or 'CHEN' (Bayesian).
         lactation_length (int | str): 305 (default), 'max' (use max DIM), or integer.
 
@@ -559,7 +577,7 @@ def persistency_fitted_curve(dim, milkrecordings, model, fitting='frequentist', 
         float: Average slope after the peak until end of lactation.
     """
     # calculate time to peak
-    t_peak = numeric_time_to_peak(dim, milkrecordings, model, fitting=fitting, key=key, parity=parity, breed=breed, continent=continent)
+    t_peak = numeric_time_to_peak(dim, milkrecordings, model, fitting=fitting, key=key, parity=parity, breed=breed, custom_priors=custom_priors, milk_unit=milk_unit, continent=continent)
 
     # determine lactation length
     if lactation_length == 'max':
@@ -570,7 +588,7 @@ def persistency_fitted_curve(dim, milkrecordings, model, fitting='frequentist', 
         lactation_length = 305
 
     # calculate milk yield at peak
-    yields = fit_lactation_curve(dim, milkrecordings, model, fitting=fitting, key=key, parity=parity, breed=breed, continent=continent)
+    yields = fit_lactation_curve(dim, milkrecordings, model, fitting=fitting, key=key, parity=parity, breed=breed, custom_priors=custom_priors, milk_unit=milk_unit, continent=continent)
     peak_yield = yields[int(t_peak) - 1]  # -1 to prevent index error
     # calculate milk yield at end of lactation
     end_yield = yields[int(lactation_length) - 1]  # -1 to prevent index error
