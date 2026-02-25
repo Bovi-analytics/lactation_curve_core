@@ -8,16 +8,13 @@ import pandas as pd
 from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, ValidationError, model_validator
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from lactationcurve import (
-    calculate_characteristic,
-    fit_lactation_curve,
-    milkbot_model,
-    test_interval_method,
-)
+from lactationcurve.characteristics import calculate_characteristic, test_interval_method
+from lactationcurve.fitting import fit_lactation_curve, milkbot_model
 
 logger = logging.getLogger("lactation_curves")
 
@@ -63,6 +60,12 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
 
 app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 def _log_and_return_422(request: Request, errors: list) -> JSONResponse:
