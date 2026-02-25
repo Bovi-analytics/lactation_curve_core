@@ -20,3 +20,4 @@ wheels/
 .env.local
 node_modules
 .next
+tests/lactationcurve/test_dotenv.py

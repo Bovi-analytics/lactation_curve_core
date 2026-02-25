@@ -238,8 +238,9 @@ def lactation_curve_characteristic_function(
         else:
             raise Exception("No positive real solution for time to peak and peak yield found")
 
-    # find function for cumulative milk yield over the first 305 days of the lactation
-    cum_my_expr = integrate(function, (t, 0, 305))
+    # find function for cumulative milk yield of the lactation. 
+    # A lactation length of 305 is the default, but this value can also be provided as a parameter in the characteristic function.
+    cum_my_expr = integrate(function, (t, 0, lactation_length))
 
     # Sorted parameter list (exclude t)
     params = tuple(
