@@ -32,7 +32,6 @@ Author: Meike van Leerdam, Date: 07-31-2025
 """
 
 import pandas as pd
-
 from lactationcurve.preprocessing import standardize_lactation_columns
 
 
@@ -42,7 +41,7 @@ def test_interval_method(
     milking_yield_col=None,
     test_id_col=None,
     default_test_id=1,
-):
+) -> pd.DataFrame:
     """Compute 305-day total milk yield using the ICAR Test Interval Method.
 
     The method applies:
@@ -94,7 +93,9 @@ def test_interval_method(
         lactation_df.sort_values(by="DaysInMilk", ascending=True, inplace=True)
 
         if len(lactation_df) < 2:
-            print(f"Skipping TestId {lactation}: not enough data points for interpolation.")
+            print(
+                f"Skipping TestId {lactation}: not enough data points for interpolation."
+            )
             continue
 
         # Start and end points
@@ -112,7 +113,9 @@ def test_interval_method(
         lactation_df["avg_yield"] = (
             lactation_df["MilkingYield"] + lactation_df["MilkingYield"].shift(-1)
         ) / 2
-        lactation_df["trapezoid_area"] = lactation_df["width"] * lactation_df["avg_yield"]
+        lactation_df["trapezoid_area"] = (
+            lactation_df["width"] * lactation_df["avg_yield"]
+        )
 
         total_intermediate = lactation_df["trapezoid_area"].sum()
 
