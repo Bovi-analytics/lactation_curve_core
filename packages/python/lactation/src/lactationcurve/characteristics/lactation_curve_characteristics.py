@@ -369,6 +369,7 @@ def calculate_characteristic(
         raise Exception(
             "this function only works for the milkbot, wood, wilmink, ali_schaeffer and fischer models"
         )
+    
 
     characteristic_options: list[str] = [
         "time_to_peak",

@@ -396,7 +396,7 @@ class TestCalculateCharacteristicErrors:
     def test_invalid_model_in_calculate_characteristic_raises(self, test_df):
         """Test that an Exception is raised for an unsupported model in calculate_characteristic."""
         dim, my = test_df
-        with pytest.raises(Exception, match="currently only works for"):
+        with pytest.raises(Exception, match="only works for"):
             calculate_characteristic(
                 dim, my, model="brody", characteristic="cumulative_milk_yield"
             )
