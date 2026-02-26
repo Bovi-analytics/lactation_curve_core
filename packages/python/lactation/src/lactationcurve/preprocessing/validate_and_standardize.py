@@ -3,7 +3,8 @@
 Input validation and tabular schema normalization for lactation curve workflows.
 
 This module provides two small utilities that are used by
-`lactationcurve.fitting.lactation_curve_fitting` and by 'lactationcurve.characteristics.lactation_curve_characteristics' to ensure consistent input handling:
+`lactationcurve.fitting.lactation_curve_fitting` and by 'lactationcurve.characteristics.lactation_curve_characteristics' 
+to ensure consistent input handling:
 
 1) `validate_and_prepare_inputs` consolidates routine checks for DIM and test‑day
    milk records, normalizes optional options (e.g., fitting method, breed, priors),
@@ -72,7 +73,8 @@ class PreparedInputs:
         persistency_method: Either `"derived"` or `"literature"`, or `None`.
         lactation_length: Integer horizon (e.g., 305), the string `"max"`, or `None`.
         milk_unit: Either `"kg"` or `"lb"`, defaulting to `"kg"`.
-        custom_priors: Either a dict of priors, the string `"CHEN"` to use Chen et al. priors, or `None` if not provided.
+        custom_priors: Either a dict of priors, the string `"CHEN"` to use Chen et al. priors, 
+            or `None` if not provided.
     """
     dim: np.ndarray
     milkrecordings: np.ndarray
@@ -136,11 +138,19 @@ def validate_and_prepare_inputs(
     milk_unit : str, optional
         Unit of milk yield measurements. Must be either ``"kg"`` or ``"lb"``. Default is ``"kg"``.
     custom_priors : dict or str or None, optional
-        Custom prior distributions for Bayesian fitting. If a dict is provided, it must be a dictionary of prior distributions for each parameter in the model. If the string ``"CHEN"`` is provided, the default Chen et al. priors are used.
+        Custom prior distributions for Bayesian fitting. If a dict is provided, 
+        it must be a dictionary of prior distributions for each parameter in the model. 
+        If the string ``"CHEN"`` is provided, the default Chen et al. priors are used.
 
     Extra input for persistency calculation:
-        persistency_method (String): way of calculating persistency, options: 'derived' which gives the average slope of the lactation after the peak until the end of lactation (default) or 'literature' for the wood and milkbot model.
-        Lactation_length: string or int: length of the lactation in days to calculate persistency over, options: 305 = default or 'max'  uses the maximum DIM in the data, or an integer value to set the desired lactation length.
+        persistency_method (String): way of calculating persistency, 
+        options: 'derived' which gives the average slope of the lactation after the peak until the end of lactation (default) 
+        or 'literature' for the wood and milkbot model.
+        Lactation_length: string or int: 
+        length of the lactation in days to calculate persistency over, 
+        options: 305 = default, 
+        or 'max'  uses the maximum DIM in the data, 
+        or an integer value to set the desired lactation length.
 
     Returns
     -------
@@ -243,7 +253,7 @@ def standardize_lactation_columns(
     test_id_col: str | None = None,
     default_test_id=0,
     max_dim: int = 305,
-) -> DataFrame:
+) -> pd.DataFrame:
     """
     Standardize column names and structure for lactation data.
 

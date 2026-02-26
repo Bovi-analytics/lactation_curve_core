@@ -1,4 +1,4 @@
-'''
+"""
 Lactation curve fitting module.
 
 This module provides functions for fitting lactation curve models to dairy cow
@@ -27,8 +27,8 @@ Pre-defined lactation curve models
     - Dijkstra
     - Prasad
 
-Author: Meike van Leerdam  
-Date: 12-8-2025  
+Author: Meike van Leerdam
+Date: 12-8-2025
 Last update: 11-feb-2025
 
 Requires
@@ -40,15 +40,15 @@ Requires
 
 Public functions
 ----------------
-- fit_lactation_curve(dim, milkrecordings, model="wood", fitting="frequentist", breed="H", parity=3, continent="USA", key=None)  
+- fit_lactation_curve
   Fit a lactation curve to the provided data and return predicted milk yield
   for each day in milk (DIM) in the range 1–305 (or up to the maximum DIM if it exceeds 305).
 
-- get_lc_parameters(dim, milkrecordings, model="wood")  
+- get_lc_parameters
   Fit a lactation curve to the provided data and return model parameters using
   frequentist statistics: minimize/curve_fit.
 
-- get_lc_parameters_least_squares(dim, milkrecordings, model="milkbot")  
+- get_lc_parameters_least_squares
   Fit a lactation curve to the provided data and return model parameters using
   least-squares estimation (frequentist).
 
@@ -57,17 +57,19 @@ Notes
 - Units: DIM in days, milk in kg or lb.
 - Input validation and normalization are delegated to
   `lactationcurve.preprocessing.validate_and_prepare_inputs`.
-- Bayesian fitting for the MilkBot model is performed via the MilkBot API, which requires an API key and accepts additional parameters for breed, parity, continent, and custom priors.
-- For information on the fitting API see https://api.milkbot.com/ or contact Jim Ehrlich, DVM: jehrlich@MilkBot.com
-'''
+- Bayesian fitting for the MilkBot model is performed via the MilkBot API, 
+    this requires an API key and accepts additional parameters for breed, parity, continent, and custom priors.
+- For information on the fitting API see https://api.milkbot.com/ 
+    or contact Jim Ehrlich, DVM: jehrlich@MilkBot.com
+"""
 
 # packages
-from typing import Any
 import numpy as np
-from pandas.core.generic import T
 import requests
 from scipy.optimize import curve_fit, least_squares, minimize
+
 from lactationcurve.preprocessing import validate_and_prepare_inputs
+
 
 # --- Models ---
 def milkbot_model(t, a, b, c, d) -> float:
@@ -107,7 +109,7 @@ def wood_model(t, a, b, c) -> float:
     return a * (t**b) * np.exp(-c * t)
 
 
-def wilmink_model(t, a, b, c, k=-0.05)-> float:
+def wilmink_model(t, a, b, c, k=-0.05) -> float:
     """Wilmink lactation curve model.
 
     Args:
@@ -127,7 +129,7 @@ def wilmink_model(t, a, b, c, k=-0.05)-> float:
     return a + b * t + c * np.exp(k * t)
 
 
-def ali_schaeffer_model(t, a, b, c, d, k)-> float:
+def ali_schaeffer_model(t, a, b, c, d, k) -> float:
     """Ali & Schaeffer lactation curve model.
 
     Args:
@@ -352,6 +354,7 @@ def milkbot_objective(par, x, y) -> float:
     """
     return np.sum((y - milkbot_model(x, *par)) ** 2)
 
+
 def residuals_milkbot(par, x, y) -> np.ndarray:
     """Residuals for least-squares fitting of the MilkBot model.
 
@@ -376,7 +379,7 @@ def fit_lactation_curve(
     continent="USA",
     custom_priors=None,
     key=None,
-    milk_unit="kg"
+    milk_unit="kg",
 ) -> np.ndarray:
     """Fit lactation data to a lactation curve model and return predictions.
 
@@ -396,15 +399,17 @@ def fit_lactation_curve(
         breed (Str): "H" (Holstein, default) or "J" (Jersey). Only used for Bayesian.
         parity (Int): Lactation number; all parities >= 3 considered one group in priors.
             Only used for Bayesian.
-        continent (Str): priors chosen by MilkBot API based on continent averages, "USA" (default), "EU".
-            Only used for Bayesian.
-        custom_priors (Dict | str | None): Custom prior distributions for Bayesian fitting. 
-            If a dict is provided, it must be a dictionary of prior distributions for each parameter in the model. Set the correct dictionary using the `build_prior` helper function. 
+        continent (Str): priors chosen by MilkBot API based on continent averages.
+            Only used for Bayesian, options: "USA" (default) and "EU".
+        custom_priors (Dict | str | None): Custom prior distributions for Bayesian fitting.
+            If a dict is provided, it must be a dictionary of prior distributions for each parameter in the model. 
+            Set the correct dictionary using the `build_prior` helper function.
             If the string "CHEN" is provided, the default Chen et al. priors are used.
             Only used for Bayesian.
-        key = Str: API key for MilkBot API (required for Bayesian fitting). 
+        key = Str: API key for MilkBot API (required for Bayesian fitting).
             Only used for Bayesian.
-        milk_unit (Str): Unit of milk yield measurements. Must be either "kg" or "lb". Default is "kg".
+        milk_unit (Str): Unit of milk yield measurements. Must be either "kg" or "lbs". 
+            Default is "kg".
             Only used for Bayesian.
 
 
@@ -429,7 +434,7 @@ def fit_lactation_curve(
         parity=parity,
         continent=continent,
         custom_priors=custom_priors,
-        milk_unit=milk_unit
+        milk_unit=milk_unit,
     )
 
     dim = inputs.dim
@@ -526,13 +531,17 @@ def fit_lactation_curve(
             raise Exception("Bayesian fitting is currently only implemented for milkbot models")
 
 
-def get_lc_parameters_least_squares(dim, milkrecordings, model="milkbot") -> tuple[float, float, float, float]:
+def get_lc_parameters_least_squares(
+    dim, milkrecordings, model="milkbot"
+) -> tuple[float, float, float, float]:
     """Fit lactation data and return model parameters (least squares; frequentist).
 
     This helper uses `scipy.optimize.least_squares` to fit the MilkBot model with bounds,
-    and returns the fitted parameters. 
-    Currently implemented only for the MilkBot model, as it is more complex and benefits from the robust optimization approach. 
-    Other models can be fitted using `get_lc_parameters` with numerical optimisation, which is generally faster for simpler models.
+    and returns the fitted parameters.
+    Currently implemented only for the MilkBot model, 
+        as it is more complex and benefits from the robust optimization approach.
+    Other models can be fitted using `get_lc_parameters` with numerical optimisation, 
+        which is generally faster for simpler models.
 
     Args:
         dim (int): List/array of DIM values.
@@ -584,7 +593,7 @@ def get_lc_parameters_least_squares(dim, milkrecordings, model="milkbot") -> tup
     return a_mb, b_mb, c_mb, d_mb
 
 
-def get_lc_parameters(dim, milkrecordings, model="wood")  -> tuple[float, ...]:
+def get_lc_parameters(dim, milkrecordings, model="wood") -> tuple[float, ...]:
     """Fit lactation data to a model and return fitted parameters (frequentist).
 
     Depending on `model`, this uses `scipy.optimize.minimize` and/or
@@ -702,7 +711,6 @@ def get_chen_priors(parity: int) -> dict:
     }
 
 
-
 def build_prior(
     scale_mean: float,
     scale_sd: float,
@@ -712,17 +720,15 @@ def build_prior(
     decay_sd: float,
     offset_mean: float,
     offset_sd: float,
-    se_milk: float = 4
+    se_milk: float = 4,
 ) -> dict:
     return {
         "scale": {"mean": scale_mean, "sd": scale_sd},
         "ramp": {"mean": ramp_mean, "sd": ramp_sd},
         "decay": {"mean": decay_mean, "sd": decay_sd},
         "offset": {"mean": offset_mean, "sd": offset_sd},
-        "seMilk": se_milk
+        "seMilk": se_milk,
     }
-
-
 
 
 def bayesian_fit_milkbot_single_lactation(
@@ -733,7 +739,7 @@ def bayesian_fit_milkbot_single_lactation(
     breed="H",
     custom_priors: dict | str | None = None,
     continent="USA",
-    milk_unit="kg"    
+    milk_unit="kg",
 ) -> dict:
     """
     Fit a single lactation using the MilkBot API.
@@ -749,8 +755,8 @@ def bayesian_fit_milkbot_single_lactation(
             - dict    → Custom priors in MilkBot format (overrides `continent`)
         continent: priors used by MilkBot API for fitting; options:
             - "USA"   → MilkBot USA priors
-            - "EU"    → MilkBot EU priors > estimates lower milk production 
-       
+            - "EU"    → MilkBot EU priors > estimates lower milk production
+
 
     Returns:
         Dictionary with fitted parameters and metadata:
@@ -772,7 +778,13 @@ def bayesian_fit_milkbot_single_lactation(
     """
     # check and prepare input
     inputs = validate_and_prepare_inputs(
-        dim, milkrecordings, breed=breed, parity=parity, custom_priors=custom_priors, continent=continent, milk_unit=milk_unit
+        dim,
+        milkrecordings,
+        breed=breed,
+        parity=parity,
+        custom_priors=custom_priors,
+        continent=continent,
+        milk_unit=milk_unit,
     )
 
     dim = inputs.dim
@@ -818,7 +830,7 @@ def bayesian_fit_milkbot_single_lactation(
             "returnInputData": False,
             "returnPath": False,
             "returnDiscriminatorPath": False,
-            # "fitEngine": "AnnealingFitter@2.0", #comment out to use the default fitter 
+            # "fitEngine": "AnnealingFitter@2.0", #comment out to use the default fitter
             # "fitObjective": "MB2@2.0",
             "preferredMilkUnit": milk_unit,
         },
@@ -827,12 +839,11 @@ def bayesian_fit_milkbot_single_lactation(
     # -----------------------------
     # Add priors if provided or when using Chen et al. priors
     # -----------------------------
-    if custom_priors == 'CHEN':
+    if custom_priors == "CHEN":
         payload["priors"] = get_chen_priors(parity)
 
     elif custom_priors is not None:
         payload["priors"] = custom_priors
-      
 
     # -----------------------------
     # Call API
@@ -869,6 +880,3 @@ def get_milkbot_version() -> None:
     """Get the current version of the MilkBot API."""
     r = requests.get(url="https://milkbot.com/version")
     print(r.json())
-
-
-

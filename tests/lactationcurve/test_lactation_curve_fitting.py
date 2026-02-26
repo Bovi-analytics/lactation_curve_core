@@ -45,6 +45,7 @@ Authors:
 
 import pytest
 import numpy as np
+import os
 from lactationcurve.fitting import (
     milkbot_model,
     wood_model,
@@ -71,12 +72,10 @@ from lactationcurve.fitting import (
 from dotenv import find_dotenv, load_dotenv
 
 
-
-load_dotenv(find_dotenv())
-
-
+@pytest.fixture
 def milkbot_api_key() -> str:
     """Return the MilkBot API key from environment."""
+    load_dotenv(find_dotenv())
     key = os.getenv("milkbot_key")
     if not key:
         raise ValueError("milkbot_key not found in environment. Check your .env file.")

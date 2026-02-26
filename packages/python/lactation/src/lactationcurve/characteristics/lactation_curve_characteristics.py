@@ -29,10 +29,9 @@ Notes
   lambdification (`is_valid_sympy_expr`) and large/invalid expressions are rejected.
 
 
-Author: Meike van Leerdam  
+Author: Meike van Leerdam
 Last update: 11-feb-2025
 """
-
 
 import numpy as np
 from numpy import ndarray
@@ -55,9 +54,9 @@ from lactationcurve.fitting import (
     bayesian_fit_milkbot_single_lactation,
     fit_lactation_curve,
     get_lc_parameters,
-    build_prior
 )
 from lactationcurve.preprocessing import validate_and_prepare_inputs
+
 
 # safe guard for extreme expressions or weird results
 def is_valid_sympy_expr(expr) -> bool:
@@ -91,7 +90,9 @@ def is_valid_sympy_expr(expr) -> bool:
 _LCC_CACHE = {}
 
 
-def lactation_curve_characteristic_function(model='wood', characteristic=None, lactation_length=305) -> tuple:
+def lactation_curve_characteristic_function(
+    model="wood", characteristic=None, lactation_length=305
+) -> tuple:
     """Build (or fetch from cache) a symbolic expression and fast numeric function for an LCC.
 
     This function derives the requested **lactation curve characteristic** for a given
@@ -127,88 +128,86 @@ def lactation_curve_characteristic_function(model='wood', characteristic=None, l
     # check the cache
     storage = (model, characteristic)
     if storage in _LCC_CACHE:
-        return (_LCC_CACHE[storage]["expr"],
-                _LCC_CACHE[storage]["params"],
-                _LCC_CACHE[storage]["func"])
+        return (
+            _LCC_CACHE[storage]["expr"],
+            _LCC_CACHE[storage]["params"],
+            _LCC_CACHE[storage]["func"],
+        )
 
     # make sure model is all lowercase
     model = model.lower()
 
     # define functions
-    if model == 'brody':
+    if model == "brody":
         # === BRODY 1 ===
-        a, b, k1, k2, t = symbols('a b k1 k2 t', real=True, positive=True)
+        a, b, k1, k2, t = symbols("a b k1 k2 t", real=True, positive=True)
         function = a * exp(-k1 * t) - b * exp(-k2 * t)
 
-    elif model == 'sikka':
+    elif model == "sikka":
         # === SIKKA ===
-        a, b, c, t = symbols('a b c t', real=True, positive=True)
-        function = a * exp(b * t - c * t ** 2)
+        a, b, c, t = symbols("a b c t", real=True, positive=True)
+        function = a * exp(b * t - c * t**2)
 
-    elif model == 'fischer':
+    elif model == "fischer":
         # === FISCHER ===
-        a, b, c, t = symbols('a b c t', real=True, positive=True)
+        a, b, c, t = symbols("a b c t", real=True, positive=True)
         function = a - b * t - a * exp(-c * t)
 
-    elif model == 'nelder':
+    elif model == "nelder":
         # === NELDER ===
-        a, b, c, t = symbols('a b c t', real=True, positive=True)
-        function = t / (a + b * t + c * t ** 2)
+        a, b, c, t = symbols("a b c t", real=True, positive=True)
+        function = t / (a + b * t + c * t**2)
 
-    elif model == 'wood':
+    elif model == "wood":
         # === WOOD ===
-        a, b, c, t = symbols('a b c t', real=True, positive=True)
-        function = a * t ** b * exp(-c * t)
+        a, b, c, t = symbols("a b c t", real=True, positive=True)
+        function = a * t**b * exp(-c * t)
 
-    elif model == 'dhanoa':
+    elif model == "dhanoa":
         # === DHANOA ===
-        a, b, c, t = symbols('a b c t', real=True, positive=True)
+        a, b, c, t = symbols("a b c t", real=True, positive=True)
         function = a * t ** (b * c) * exp(-c * t)
 
-    elif model == 'emmans':
+    elif model == "emmans":
         # === EMMANS ===
-        a, b, c, d, t = symbols('a b c d t')
+        a, b, c, d, t = symbols("a b c d t")
         function = a * exp(-exp(d - b * t)) * exp(-c * t)
 
-    elif model == 'ali_schaeffer':
+    elif model == "ali_schaeffer":
         # ====ALI=====
-        a, b, c, d, k, t = symbols('a b c d k t', real=True, positive=True)
+        a, b, c, d, k, t = symbols("a b c d k t", real=True, positive=True)
         function = (
-            a
-            + b * (t / 340)
-            + c * (t / 340) ** 2
-            + d * log(t / 340)
-            + k * log((340 / t) ** 2)
+            a + b * (t / 340) + c * (t / 340) ** 2 + d * log(t / 340) + k * log((340 / t) ** 2)
         )
 
-    elif model == 'wilmink':
+    elif model == "wilmink":
         # === WILMINK ===
-        a, b, c, k, t = symbols('a b c k t', real=True, positive=True)
+        a, b, c, k, t = symbols("a b c k t", real=True, positive=True)
         function = a + b * t + c * exp(-k * t)
 
-    elif model == 'hayashi':
+    elif model == "hayashi":
         # === HAYASHI ===
-        a, b, c, d, t = symbols('a b c d t', real=True, positive=True)
+        a, b, c, d, t = symbols("a b c d t", real=True, positive=True)
         function = b * (exp(-t / c) - exp(-t / (a * c)))
 
-    elif model == 'rook':
+    elif model == "rook":
         # === ROOK ===
-        a, b, c, d, t = symbols('a b c d t', real=True, positive=True)
+        a, b, c, d, t = symbols("a b c d t", real=True, positive=True)
         function = a * (1 / (1 + b / (c + t))) * exp(-d * t)
 
-    elif model == 'dijkstra':
+    elif model == "dijkstra":
         # === DIJKSTRA ===
-        a, b, c, d, t = symbols('a b c d t', real=True, positive=True)
+        a, b, c, d, t = symbols("a b c d t", real=True, positive=True)
         function = a * exp((b * (1 - exp(-c * t)) / c) - d * t)
 
-    elif model == 'prasad':
+    elif model == "prasad":
         # === PRASAD ===
-        a, b, c, d, t = symbols('a b c d t', real=True, positive=True)
-        function = a + b * t + c * t ** 2 + d / t
+        a, b, c, d, t = symbols("a b c d t", real=True, positive=True)
+        function = a + b * t + c * t**2 + d / t
 
-    elif model == 'milkbot':
+    elif model == "milkbot":
         # === MILKBOT ===
-        a, b, c, d, t = symbols('a b c d t', real=True, positive=True)
+        a, b, c, d, t = symbols("a b c d t", real=True, positive=True)
         function = a * (1 - exp((c - t) / b) / 2) * exp(-d * t)
 
     else:
@@ -233,17 +232,19 @@ def lactation_curve_characteristic_function(model='wood', characteristic=None, l
     except Exception:
         persistency = None
 
-    if characteristic != 'cumulative_milk_yield':
+    if characteristic != "cumulative_milk_yield":
         if tpeak:  # Check if the list is not empty
             peak_expr = simplify(function.subs(t, tpeak[0]))
         else:
-            raise Exception('No positive real solution for time to peak and peak yield found')
+            raise Exception("No positive real solution for time to peak and peak yield found")
 
     # find function for cumulative milk yield over the first 305 days of the lactation
     cum_my_expr = integrate(function, (t, 0, 305))
 
     # Sorted parameter list (exclude t)
-    params = tuple(sorted([s for s in function.free_symbols if s.name != "t"], key=lambda x: x.name))
+    params = tuple(
+        sorted([s for s in function.free_symbols if s.name != "t"], key=lambda x: x.name)
+    )
 
     # ----------------------------------------------------
     # Select requested characteristic
@@ -254,7 +255,7 @@ def lactation_curve_characteristic_function(model='wood', characteristic=None, l
         expr = peak_expr
     elif characteristic == "cumulative_milk_yield":
         expr = cum_my_expr
-    elif characteristic == 'persistency':
+    elif characteristic == "persistency":
         if persistency is None:
             raise Exception("Persistency could not be computed symbolically")
         expr = persistency
@@ -271,27 +272,37 @@ def lactation_curve_characteristic_function(model='wood', characteristic=None, l
     # Build fast numeric function with lambdify
     # ----------------------------------------------------
     if isinstance(expr, dict):
-        func = {name: lambdify(params, ex, modules=["numpy", 'scipy'])
-                for name, ex in expr.items()
-                if ex is not None}
+        func = {
+            name: lambdify(params, ex, modules=["numpy", "scipy"])
+            for name, ex in expr.items()
+            if ex is not None
+        }
     else:
-        func = lambdify(params, expr, modules=["numpy", 'scipy'])
+        func = lambdify(params, expr, modules=["numpy", "scipy"])
 
     # ----------------------------------------------------
     # Store in cache
     # ----------------------------------------------------
-    _LCC_CACHE[storage] = {
-        "expr": expr,
-        "params": params,
-        "func": func
-    }
+    _LCC_CACHE[storage] = {"expr": expr, "params": params, "func": func}
 
     return expr, params, func
 
 
-def calculate_characteristic(dim, milkrecordings, model='wood', characteristic='cumulative_milk_yield',
-                             fitting='frequentist', key=None, parity=3, breed='H', continent='USA', custom_priors=None, milk_unit='kg',
-                             persistency_method='derived', lactation_length=305) -> float:
+def calculate_characteristic(
+    dim,
+    milkrecordings,
+    model="wood",
+    characteristic="cumulative_milk_yield",
+    fitting="frequentist",
+    key=None,
+    parity=3,
+    breed="H",
+    continent="USA",
+    custom_priors=None,
+    milk_unit="kg",
+    persistency_method="derived",
+    lactation_length=305,
+) -> float:
     """Evaluate a lactation curve characteristic from observed test-day data.
 
     This function fits the requested model (frequentist or Bayesian via MilkBot),
@@ -303,13 +314,15 @@ def calculate_characteristic(dim, milkrecordings, model='wood', characteristic='
         milkrecordings (Float): Milk recordings (kg or lbs) for each DIM.
         model (str): Model name. Supported for this function:
             'milkbot', 'wood', 'wilmink', 'ali_schaeffer', 'fischer'.
-        characteristic (str): One of 'time_to_peak', 'peak_yield', 'cumulative_milk_yield', 'persistency'.
+        characteristic (str): One of:
+            'time_to_peak', 'peak_yield', 'cumulative_milk_yield', 'persistency'.
         fitting (str): 'frequentist' (default) or 'bayesian'.
         key (str | None): API key for MilkBot Bayesian fitting.
         parity (Int): Parity of the cow; values above 3 are considered as 3 (Bayesian).
         breed (str): 'H' (Holstein) or 'J' (Jersey) (Bayesian).
         custom_priors: provide your own priors for Bayesian fitting.
-            provide as dictionary using build_prior() function to create the priors in the right format.
+            provide as dictionary using build_prior() function
+            to create the priors in the right format.
             Alternative use priors from the literature provided by the string command 'CHEN'
         milk_unit: Unit of milk recordings ('kg' or 'lb') for Bayesian fitting.
         continent (str): 'USA' or 'EU' (Bayesian).
@@ -337,7 +350,7 @@ def calculate_characteristic(dim, milkrecordings, model='wood', characteristic='
         custom_priors=custom_priors,
         milk_unit=milk_unit,
         persistency_method=persistency_method,
-        lactation_length=lactation_length
+        lactation_length=lactation_length,
     )
 
     dim: ndarray = inputs.dim
@@ -352,102 +365,186 @@ def calculate_characteristic(dim, milkrecordings, model='wood', characteristic='
     persistency_method: str | None = inputs.persistency_method
     lactation_length: int | str | None = inputs.lactation_length
 
-    if model not in ['milkbot', 'wood', 'wilmink', 'ali_schaeffer', 'fischer']:
-        raise Exception('this function currently only works for the milkbot, wood, wilmink, ali_schaeffer and fischer models')
+    if model not in ["milkbot", "wood", "wilmink", "ali_schaeffer", "fischer"]:
+        raise Exception(
+            "this function only works for the milkbot, wood, wilmink, ali_schaeffer and fischer models"
+        )
 
-    characteristic_options: list[str] = ["time_to_peak", "peak_yield", "cumulative_milk_yield", "persistency"]
+    characteristic_options: list[str] = [
+        "time_to_peak",
+        "peak_yield",
+        "cumulative_milk_yield",
+        "persistency",
+    ]
 
     if characteristic in characteristic_options:
-        if fitting == 'frequentist':
-
+        if fitting == "frequentist":
             # Get fitted parameters from your fitting function
             fitted_params = get_lc_parameters(dim, milkrecordings, model)
 
-            if characteristic != 'persistency':
+            if characteristic != "persistency":
                 # Try symbolic formula first
-                expr, params, fn = lactation_curve_characteristic_function(model, characteristic, lactation_length)
-                with np.errstate(divide='ignore', invalid='ignore'):  # get rid of warnings for invalid operations
+                expr, params, fn = lactation_curve_characteristic_function(
+                    model, characteristic, lactation_length
+                )
+                with np.errstate(
+                    divide="ignore", invalid="ignore"
+                ):  # get rid of warnings for invalid operations
                     value = fn(*fitted_params)
 
                 # If symbolic formula fails or is invalid (use numeric approach)
-                if value is None or not np.isfinite(value) or (characteristic == 'time_to_peak' and value <= 0):
-                    if characteristic == 'time_to_peak':
-                        value = numeric_time_to_peak(dim, milkrecordings, model, fitting=fitting,
-                                                     key=key, parity=parity, breed=breed, continent=continent)
-                    elif characteristic == 'peak_yield':
-                        value = numeric_peak_yield(dim, milkrecordings, model, fitting=fitting,
-                                                   key=key, parity=parity, breed=breed, continent=continent)
-                    elif characteristic == 'cumulative_milk_yield':
-                        value = numeric_cumulative_yield(dim, milkrecordings, model, fitting=fitting,
-                                                         lactation_length=lactation_length,
-                                                         key=key, parity=parity, breed=breed, continent=continent)
+                if (
+                    value is None
+                    or not np.isfinite(value)
+                    or (characteristic == "time_to_peak" and value <= 0)
+                ):
+                    if characteristic == "time_to_peak":
+                        value = numeric_time_to_peak(
+                            dim,
+                            milkrecordings,
+                            model,
+                            fitting=fitting,
+                            key=key,
+                            parity=parity,
+                            breed=breed,
+                            continent=continent,
+                        )
+                    elif characteristic == "peak_yield":
+                        value = numeric_peak_yield(
+                            dim,
+                            milkrecordings,
+                            model,
+                            fitting=fitting,
+                            key=key,
+                            parity=parity,
+                            breed=breed,
+                            continent=continent,
+                        )
+                    elif characteristic == "cumulative_milk_yield":
+                        value = numeric_cumulative_yield(
+                            dim,
+                            milkrecordings,
+                            model,
+                            fitting=fitting,
+                            lactation_length=lactation_length,
+                            key=key,
+                            parity=parity,
+                            breed=breed,
+                            continent=continent,
+                        )
 
             else:
-                if persistency_method == 'derived':
+                if persistency_method == "derived":
                     # find lactation length from data
-                    if lactation_length == 'max':
+                    if lactation_length == "max":
                         lactation_length = max(dim)
                     elif isinstance(lactation_length, int):
                         lactation_length = lactation_length
                     else:
                         lactation_length = 305
-                    value = persistency_fitted_curve(dim, milkrecordings, model, fitting='frequentist', lactation_length=lactation_length)
+                    value = persistency_fitted_curve(
+                        dim,
+                        milkrecordings,
+                        model,
+                        fitting="frequentist",
+                        lactation_length=lactation_length,
+                    )
 
                 else:
-                    if model == 'wood':
+                    if model == "wood":
                         value = persistency_wood(fitted_params[1], fitted_params[2])
 
-                    elif model == 'milkbot':
+                    elif model == "milkbot":
                         value = persistency_milkbot(fitted_params[3])
 
                     else:
                         raise Exception(
-                            'Currently only the Wood model and MilkBot model have a separate model function from the literature integrated for persistency. if persistency="derived" is selected, persistency can be calculated for every model as the average slope of the lactation after the peak.')
+                            """Currently only the Wood model and MilkBot model have a separate model function from the literature integrated for persistency. 
+                            If persistency="derived" is selected, persistency can be calculated for every model as the average slope of the lactation after the peak."""
+                        )
             try:
                 return float(value)
             except ValueError:
-                raise Exception('Could not compute characteristic, possibly due to invalid fitted parameters')
+                raise Exception(
+                    "Could not compute characteristic, possibly due to invalid fitted parameters"
+                )
 
         else:
-            if model == 'milkbot':
+            if model == "milkbot":
                 if key is None:
-                    raise Exception('Key needed to use Bayesian fitting engine MilkBot')
+                    raise Exception("Key needed to use Bayesian fitting engine MilkBot")
                 else:
-                    fitted_params_bayes = bayesian_fit_milkbot_single_lactation(dim, milkrecordings, key = key, parity = parity, breed=breed, custom_priors = custom_priors, continent=continent, milk_unit=milk_unit)
-                    fitted_params_bayes = fitted_params_bayes['scale'], fitted_params_bayes['ramp'], fitted_params_bayes['offset'], fitted_params_bayes['decay']
+                    fitted_params_bayes = bayesian_fit_milkbot_single_lactation(
+                        dim,
+                        milkrecordings,
+                        key=key,
+                        parity=parity,
+                        breed=breed,
+                        custom_priors=custom_priors,
+                        continent=continent,
+                        milk_unit=milk_unit,
+                    )
+                    fitted_params_bayes = (
+                        fitted_params_bayes["scale"],
+                        fitted_params_bayes["ramp"],
+                        fitted_params_bayes["offset"],
+                        fitted_params_bayes["decay"],
+                    )
 
-                    if characteristic != 'persistency':
+                    if characteristic != "persistency":
                         # Get the symbolic expression and model parameters
-                        expr, param_symbols, fn = lactation_curve_characteristic_function(model, characteristic)
+                        expr, param_symbols, fn = lactation_curve_characteristic_function(
+                            model, characteristic
+                        )
                         value = fn(*fitted_params_bayes)
 
                     else:
-                        if persistency_method == 'derived':
+                        if persistency_method == "derived":
                             # find lactation length from data
-                            if lactation_length == 'max':
+                            if lactation_length == "max":
                                 lactation_length = max(dim)
                             elif isinstance(lactation_length, int):
                                 lactation_length = lactation_length
                             else:
                                 lactation_length = 305
-                            value = persistency_fitted_curve(dim, milkrecordings, model, fitting='bayesian',
-                                                             key=key, parity=parity, breed=breed, custom_priors=custom_priors, milk_unit=milk_unit, continent=continent,
-                                                             lactation_length=lactation_length)
+                            value = persistency_fitted_curve(
+                                dim,
+                                milkrecordings,
+                                model,
+                                fitting="bayesian",
+                                key=key,
+                                parity=parity,
+                                breed=breed,
+                                custom_priors=custom_priors,
+                                milk_unit=milk_unit,
+                                continent=continent,
+                                lactation_length=lactation_length,
+                            )
 
                         else:
                             value = persistency_milkbot(fitted_params_bayes[3])
 
                     return float(value)
             else:
-                raise Exception('Bayesian fitting is currently only implemented for MilkBot models')
+                raise Exception("Bayesian fitting is currently only implemented for MilkBot models")
 
     else:
-        raise Exception('Unknown characteristic')
+        raise Exception("Unknown characteristic")
 
 
 # also define numeric approaches as back up if symbolic functions fail or throw invalid results
-def numeric_time_to_peak(dim, milkrecordings, model, fitting='frequentist', key=None, parity=3,
-                         breed='H', custom_priors=None, milk_unit='kg', continent='USA') -> int:
+def numeric_time_to_peak(
+    dim,
+    milkrecordings,
+    model,
+    fitting="frequentist",
+    key=None,
+    parity=3,
+    breed="H",
+    custom_priors=None,
+    milk_unit="kg",
+    continent="USA",
+) -> int:
     """Compute time to peak using a numeric approach.
 
     Fits the curve (frequentist or Bayesian), evaluates the predicted yields,
@@ -462,7 +559,7 @@ def numeric_time_to_peak(dim, milkrecordings, model, fitting='frequentist', key=
         parity: Parity for Bayesian fitting.
         breed: Breed for Bayesian fitting ('H' or 'J').
         custom_priors: provide your own priors for Bayesian fitting.
-            provide as dictionary using build_prior() function to create the priors in the right format.
+            provide as dictionary using build_prior() function to set the priors in the right format.
             Alternative use priors from the literature provided by the string command 'CHEN'
         milk_unit: Unit of milk recordings ('kg' or 'lb') for Bayesian fitting.
         continent: Prior source for Bayesian ('USA', 'EU').
@@ -472,14 +569,27 @@ def numeric_time_to_peak(dim, milkrecordings, model, fitting='frequentist', key=
         int: DIM at which the curve attains its maximum (1-indexed).
     """
     # Fit the curve to get predicted milk yields
-    yields = fit_lactation_curve(dim, milkrecordings, model, fitting=fitting, key=key, parity=parity, breed=breed, custom_priors=custom_priors, milk_unit=milk_unit, continent=continent)
+    yields = fit_lactation_curve(
+        dim,
+        milkrecordings,
+        model,
+        fitting=fitting,
+        key=key,
+        parity=parity,
+        breed=breed,
+        custom_priors=custom_priors,
+        milk_unit=milk_unit,
+        continent=continent,
+    )
     # Find the index of the peak yield
     peak_idx = np.argmax(yields)
     # Return the corresponding DIM
     return int(peak_idx + 1)  # +1 because DIM starts at 1, not 0
 
 
-def numeric_cumulative_yield(dim, milkrecordings, model, fitting='frequentist', lactation_length=305, **kwargs) -> float:
+def numeric_cumulative_yield(
+    dim, milkrecordings, model, fitting="frequentist", lactation_length=305, **kwargs
+) -> float:
     """Compute cumulative milk yield numerically over a given horizon.
 
     Adds up the fitted milk yield for the first `lactation_length` days of the
@@ -500,8 +610,18 @@ def numeric_cumulative_yield(dim, milkrecordings, model, fitting='frequentist', 
     return np.trapezoid(y[:lactation_length], dx=1)
 
 
-def numeric_peak_yield(dim, milkrecordings, model, fitting='frequentist', key=None, parity=3,
-                       breed='H', custom_priors=None, milk_unit='kg', continent='USA') -> float:
+def numeric_peak_yield(
+    dim,
+    milkrecordings,
+    model,
+    fitting="frequentist",
+    key=None,
+    parity=3,
+    breed="H",
+    custom_priors=None,
+    milk_unit="kg",
+    continent="USA",
+) -> float:
     """Compute peak yield numerically from the fitted curve.
 
     Args:
@@ -518,7 +638,18 @@ def numeric_peak_yield(dim, milkrecordings, model, fitting='frequentist', key=No
         float: Maximum predicted milk yield.
     """
     # Fit the curve to get predicted milk yields
-    yields = fit_lactation_curve(dim, milkrecordings, model, fitting=fitting, key=key, parity=parity, breed=breed, custom_priors=custom_priors, milk_unit=milk_unit, continent=continent)
+    yields = fit_lactation_curve(
+        dim,
+        milkrecordings,
+        model,
+        fitting=fitting,
+        key=key,
+        parity=parity,
+        breed=breed,
+        custom_priors=custom_priors,
+        milk_unit=milk_unit,
+        continent=continent,
+    )
     # Find the peak yield
     peak_yield = np.max(yields)
     return peak_yield
@@ -549,8 +680,19 @@ def persistency_milkbot(d) -> float:
     return 0.693 / d
 
 
-def persistency_fitted_curve(dim, milkrecordings, model, fitting='frequentist', key=None, parity=3,
-                             breed='H', custom_priors=None, milk_unit='kg', continent='USA', lactation_length=305) -> float:
+def persistency_fitted_curve(
+    dim,
+    milkrecordings,
+    model,
+    fitting="frequentist",
+    key=None,
+    parity=3,
+    breed="H",
+    custom_priors=None,
+    milk_unit="kg",
+    continent="USA",
+    lactation_length=305,
+) -> float:
     """Persistency as the average slope after peak until end of lactation (numeric).
 
     This is the default approach because symbolic derivation is not feasible for
@@ -577,10 +719,21 @@ def persistency_fitted_curve(dim, milkrecordings, model, fitting='frequentist', 
         float: Average slope after the peak until end of lactation.
     """
     # calculate time to peak
-    t_peak = numeric_time_to_peak(dim, milkrecordings, model, fitting=fitting, key=key, parity=parity, breed=breed, custom_priors=custom_priors, milk_unit=milk_unit, continent=continent)
+    t_peak = numeric_time_to_peak(
+        dim,
+        milkrecordings,
+        model,
+        fitting=fitting,
+        key=key,
+        parity=parity,
+        breed=breed,
+        custom_priors=custom_priors,
+        milk_unit=milk_unit,
+        continent=continent,
+    )
 
     # determine lactation length
-    if lactation_length == 'max':
+    if lactation_length == "max":
         lactation_length = max(dim)
     elif isinstance(lactation_length, int):
         lactation_length = lactation_length
@@ -588,7 +741,18 @@ def persistency_fitted_curve(dim, milkrecordings, model, fitting='frequentist', 
         lactation_length = 305
 
     # calculate milk yield at peak
-    yields = fit_lactation_curve(dim, milkrecordings, model, fitting=fitting, key=key, parity=parity, breed=breed, custom_priors=custom_priors, milk_unit=milk_unit, continent=continent)
+    yields = fit_lactation_curve(
+        dim,
+        milkrecordings,
+        model,
+        fitting=fitting,
+        key=key,
+        parity=parity,
+        breed=breed,
+        custom_priors=custom_priors,
+        milk_unit=milk_unit,
+        continent=continent,
+    )
     peak_yield = yields[int(t_peak) - 1]  # -1 to prevent index error
     # calculate milk yield at end of lactation
     end_yield = yields[int(lactation_length) - 1]  # -1 to prevent index error

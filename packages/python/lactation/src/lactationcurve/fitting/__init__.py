@@ -4,6 +4,7 @@ from .lactation_curve_fitting import (
     ali_schaeffer_model,
     bayesian_fit_milkbot_single_lactation,
     brody_model,
+    build_prior,
     dhanoa_model,
     dijkstra_model,
     emmans_model,
@@ -20,7 +21,6 @@ from .lactation_curve_fitting import (
     sikka_model,
     wilmink_model,
     wood_model,
-    build_prior,
 )
 
 __all__ = [

@@ -50,11 +50,11 @@ from lactationcurve.characteristics import (
     persistency_wood,
 )
 
-load_dotenv(find_dotenv())
 
 @pytest.fixture
 def key() -> str:
     """Return the MilkBot API key from environment."""
+    load_dotenv(find_dotenv())
     key = os.getenv("milkbot_key")
     if not key:
         raise ValueError("milkbot_key not found in environment. Check your .env file.")
