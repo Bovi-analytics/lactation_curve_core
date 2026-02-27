@@ -9,16 +9,18 @@ from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from packages.python.lactation.src.lactationcurve.preprocessing.validate_and_standardize import MilkBotPriors
+from lactationcurve.preprocessing.validate_and_standardize import MilkBotPriors
 from pydantic import BaseModel, Field, ValidationError, model_validator
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from lactationcurve import (
+from lactationcurve.characteristics import (
     calculate_characteristic,
-    fit_lactation_curve,
-    milkbot_model,
     test_interval_method,
 )
+
+from lactationcurve.fitting import (
+    fit_lactation_curve,
+    milkbot_model,)
 
 logger = logging.getLogger("lactation_curves")
 
@@ -218,7 +220,8 @@ class FitRequest(BaseModel):
     custom_priors: MilkBotPriors | Literal["CHEN"] = Field(
         default=None,
         description=""" Custom prior distributions for Bayesian fitting.
-            If a dict is provided, it must be a dictionary of prior distributions for each parameter in the model including mean and std values. 
+            If a dict is provided, it must be a dictionary of prior distributions for each parameter in the model 
+            including mean and std values. 
             If the string ``"CHEN"`` is provided, the default Chen et al. priors are used.""",
     )
     milk_unit: Literal["kg", "lbs"] = Field(
@@ -283,10 +286,22 @@ class CharacteristicRequest(BaseModel):
         ge=1,
         description="Lactation number. Parities >= 3 are one group.",
     )
-    continent: Literal["USA", "EU", "CHEN"] = Field(
+    continent: Literal["USA", "EU"] = Field(
         default="USA",
-        description="Continent for priors: USA, EU, or CHEN.",
+        description="Continent for priors: USA or EU",
     )
+    custom_priors: MilkBotPriors | Literal["CHEN"] = Field(
+        default=None,
+        description=""" Custom prior distributions for Bayesian fitting.
+            If a dict is provided, it must be a dictionary of prior distributions for each parameter in the model 
+            including mean and std values. 
+            If the string ``"CHEN"`` is provided, the default Chen et al. priors are used.""",
+    )
+    milk_unit: Literal["kg", "lbs"] = Field(
+        default="kg",
+        description="Unit of milk yield",
+    )
+        
     persistency_method: Literal["derived", "literature"] = Field(
         default="derived",
         description=PERSISTENCY_DESC,
