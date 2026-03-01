@@ -2,12 +2,11 @@ name: cffconvert
 
 on:
   push:
-    paths:
-      - CITATION.cff
-
+    branches:
+      - master
   pull_request:
-    paths:
-      - CITATION.cff
+    branches:
+      - master
 
 jobs:
   validate:
