@@ -227,7 +227,7 @@ wheels = [
 
 [[package]]
 name = "lactation-curve-core"
-version = "0.1.0"
+version = "1.0.0"
 source = { virtual = "." }
 dependencies = [
     { name = "lactationcurve" },
@@ -268,7 +268,7 @@ dev = [
 
 [[package]]
 name = "lactationcurve"
-version = "0.1.1"
+version = "1.1.1"
 source = { editable = "packages/python/lactation" }
 dependencies = [
     { name = "numpy" },

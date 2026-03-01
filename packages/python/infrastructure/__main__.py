@@ -15,10 +15,8 @@ Deployment approach:
 """
 
 import hashlib
-from pathlib import Path
 
 import pulumi
-from dotenv import dotenv_values
 from pulumi_azure_native import (
     applicationinsights,
     operationalinsights,
@@ -33,15 +31,7 @@ from pulumi_azure_native import (
 config = pulumi.Config()
 stack = pulumi.get_stack()
 
-# Load environment variables from .env.{stack}
-env_file = Path(__file__).parent / f".env.{stack}"
-if not env_file.exists():
-    raise FileNotFoundError(f"Environment file not found: {env_file}")
-env = dotenv_values(env_file)
-
-location = env.get("LOCATION")
-if not location:
-    raise ValueError(f"LOCATION not set in {env_file}")
+location = config.require("location")
 
 # Naming prefix based on stack (e.g., "milkbot-dev")
 prefix = f"milkbot-{stack}"
@@ -55,13 +45,11 @@ tags = {
 }
 
 # ---------------------------------------------------------------------------
-# Resource Group (existing - looked up from .env.{stack})
+# Resource Group (existing - looked up from Pulumi config)
 # ---------------------------------------------------------------------------
 subscription_id = config.require("subscriptionId")
 suffix = hashlib.md5(subscription_id.encode()).hexdigest()[:6]
-resource_group_name = env.get("RESOURCE_GROUP")
-if not resource_group_name:
-    raise ValueError(f"RESOURCE_GROUP not set in {env_file}")
+resource_group_name = config.require("resourceGroup")
 
 resource_group = resources.ResourceGroup.get(
     "resource-group",
