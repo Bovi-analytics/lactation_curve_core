@@ -1,5 +1,5 @@
 encryptionsalt: v1:u9hgvrZLnek=:v1:bK60VlNRYiKtfFXc:H7kVodD+Z6/iEQqoq1HaTNXYq3zjJQ==
 config:
-  azure-native:location: westeurope
   lactationcurve:milkbotKey:
     secure: v1:vwjFtaiwKeZc0RGM:Hcp8zukUrXDFZgeQAQG35c8wm1UEHVrsWM9QZnMu/hI=
+  lactationcurve:subscriptionId: ed150bce-3150-4fe4-b9e9-557ade4ccef5

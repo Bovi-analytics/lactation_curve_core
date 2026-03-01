@@ -1,0 +1,70 @@
+# Pre-commit hooks for lactation_curve_core
+# Install: uv run pre-commit install
+# Run all: uv run pre-commit run --all-files
+
+repos:
+  # ── General checks ──────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      - id: check-merge-conflict
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+
+  # ── Secrets detection ───────────────────────────────────────
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: (bun\.lock|uv\.lock)$
+
+  # ── Python formatting + linting ─────────────────────────────
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.0
+    hooks:
+      - id: ruff-format
+      - id: ruff
+        args: [--fix]
+
+  # ── Python type checking ────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: basedpyright
+        name: basedpyright
+        entry: uv run basedpyright
+        language: system
+        types: [python]
+        pass_filenames: false
+
+  # ── TypeScript formatting (prettier) ────────────────────────
+      - id: prettier
+        name: prettier
+        entry: bash -c 'cd apps/dashboard && bun run format:check'
+        language: system
+        types_or: [typescript, tsx, javascript, jsx, json, css]
+        files: ^apps/dashboard/
+        pass_filenames: false
+
+  # ── TypeScript linting (eslint) ─────────────────────────────
+      - id: eslint
+        name: eslint
+        entry: bash -c 'cd apps/dashboard && bun run lint'
+        language: system
+        types_or: [typescript, tsx, javascript, jsx]
+        files: ^apps/dashboard/src/
+        pass_filenames: false
+
+  # ── TypeScript type checking (tsc) ──────────────────────────
+      - id: tsc
+        name: tsc
+        entry: bash -c 'cd apps/dashboard && bun run typecheck'
+        language: system
+        types_or: [typescript, tsx]
+        files: ^apps/dashboard/
+        pass_filenames: false
