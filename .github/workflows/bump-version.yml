@@ -1,0 +1,42 @@
+name: Version Bump
+
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+
+      - name: Install semantic-release
+        run: uv tool install "python-semantic-release>=10.0.0,<11"
+
+      - name: Determine version bump
+        working-directory: packages/python/lactation
+        run: |
+          if semantic-release --noop version --print 2>&1 | grep -q "No release will be made"; then
+            echo "::error::No release triggered. Use conventional commit prefixes: 'feat: ...' (minor bump), 'fix: ...' (patch bump), or 'feat!: ...' / 'BREAKING CHANGE:' (major bump)."
+            exit 1
+          fi
+
+      - name: Bump version, tag, and create GitHub Release
+        working-directory: packages/python/lactation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: semantic-release version --vcs-release --push
