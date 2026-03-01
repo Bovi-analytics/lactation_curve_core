@@ -1,8 +1,7 @@
 import numpy as np
 from fastapi import FastAPI
+from lactationcurve.fitting import milkbot_model
 from pydantic import BaseModel, Field
-
-from lactationcurve import milkbot_model
 
 app = FastAPI(title="MilkBot API")
 

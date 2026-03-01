@@ -4,7 +4,6 @@ from pathlib import Path
 import pandas as pd
 import pytest
 import sympy as sp
-
 from lactationcurve.characteristics import (
     calculate_characteristic,
     lactation_curve_characteristic_function,

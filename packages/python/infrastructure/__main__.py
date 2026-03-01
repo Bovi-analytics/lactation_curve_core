@@ -101,9 +101,7 @@ storage_keys = pulumi.Output.all(resource_group.name, storage_account.name).appl
 )
 primary_storage_key = storage_keys.keys[0].value
 
-storage_connection_string = pulumi.Output.all(
-    storage_account.name, primary_storage_key
-).apply(
+storage_connection_string = pulumi.Output.all(storage_account.name, primary_storage_key).apply(
     lambda args: (
         f"DefaultEndpointsProtocol=https;"
         f"AccountName={args[0]};"

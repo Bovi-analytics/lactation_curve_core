@@ -1,5 +1,5 @@
-import type { ReactElement, ReactNode } from 'react';
-import { DashboardShell } from '@/components/dashboard/dashboard-shell';
+import type { ReactElement, ReactNode } from "react";
+import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 
 interface DashboardLayoutProps {
   readonly children: ReactNode;

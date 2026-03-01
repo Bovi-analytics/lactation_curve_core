@@ -1,6 +1,7 @@
 import logging
 import time
 import uuid
+from collections.abc import Sequence
 from typing import Literal, Self
 
 import numpy as np
@@ -10,11 +11,10 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, ValidationError, model_validator
-from starlette.middleware.base import BaseHTTPMiddleware
-
 from lactationcurve.characteristics import calculate_characteristic, test_interval_method
 from lactationcurve.fitting import fit_lactation_curve, milkbot_model
+from pydantic import BaseModel, Field, ValidationError, model_validator
+from starlette.middleware.base import BaseHTTPMiddleware
 
 logger = logging.getLogger("lactation_curves")
 
@@ -33,7 +33,10 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             duration_ms = (time.perf_counter() - start) * 1000
             logger.exception(
                 "Unhandled error | %s %s | request_id=%s | %.0fms",
-                request.method, request.url.path, request_id, duration_ms,
+                request.method,
+                request.url.path,
+                request_id,
+                duration_ms,
             )
             return JSONResponse(
                 status_code=500,
@@ -46,14 +49,20 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         if response.status_code >= 500:
             logger.error(
                 "%s %s -> %d | request_id=%s | %.0fms",
-                request.method, request.url.path,
-                response.status_code, request_id, duration_ms,
+                request.method,
+                request.url.path,
+                response.status_code,
+                request_id,
+                duration_ms,
             )
         else:
             logger.info(
                 "%s %s -> %d | request_id=%s | %.0fms",
-                request.method, request.url.path,
-                response.status_code, request_id, duration_ms,
+                request.method,
+                request.url.path,
+                response.status_code,
+                request_id,
+                duration_ms,
             )
 
         return response
@@ -68,11 +77,14 @@ app.add_middleware(
 )
 
 
-def _log_and_return_422(request: Request, errors: list) -> JSONResponse:
+def _log_and_return_422(request: Request, errors: list | Sequence) -> JSONResponse:
     request_id = getattr(request.state, "request_id", "unknown")
     logger.warning(
         "Validation error | %s %s | request_id=%s | errors=%s",
-        request.method, request.url.path, request_id, errors,
+        request.method,
+        request.url.path,
+        request_id,
+        errors,
     )
     return JSONResponse(
         status_code=422,
@@ -82,14 +94,16 @@ def _log_and_return_422(request: Request, errors: list) -> JSONResponse:
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(
-    request: Request, exc: RequestValidationError,
+    request: Request,
+    exc: RequestValidationError,
 ) -> JSONResponse:
     return _log_and_return_422(request, exc.errors())
 
 
 @app.exception_handler(ValidationError)
 async def pydantic_validation_handler(
-    request: Request, exc: ValidationError,
+    request: Request,
+    exc: ValidationError,
 ) -> JSONResponse:
     return _log_and_return_422(request, exc.errors())
 
@@ -99,22 +113,22 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     request_id = getattr(request.state, "request_id", "unknown")
     logger.exception(
         "Unhandled exception | %s %s | request_id=%s | %s: %s",
-        request.method, request.url.path, request_id,
-        type(exc).__name__, exc,
+        request.method,
+        request.url.path,
+        request_id,
+        type(exc).__name__,
+        exc,
     )
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal server error", "request_id": request_id},
     )
 
+
 DIM_DESC = (
-    "Days in milk (DIM) for each test-day recording."
-    " Must have the same length as milkrecordings."
+    "Days in milk (DIM) for each test-day recording. Must have the same length as milkrecordings."
 )
-MILK_DESC = (
-    "Milk yield (kg) for each test-day recording."
-    " Must have the same length as dim."
-)
+MILK_DESC = "Milk yield (kg) for each test-day recording. Must have the same length as dim."
 MODEL_DESC = (
     "Lactation curve model to fit."
     " Wood (3-param), Wilmink (4-param), Ali-Schaeffer (5-param),"
@@ -137,8 +151,7 @@ PERSISTENCY_DESC = (
     " 'literature': analytical formula (Wood/MilkBot only)."
 )
 LACTATION_LENGTH_DESC = (
-    "Lactation length in days for the calculation."
-    " 305 (default), or a custom integer."
+    "Lactation length in days for the calculation. 305 (default), or a custom integer."
 )
 TEST_IDS_DESC = (
     "Optional lactation/animal identifier per record."
@@ -151,10 +164,7 @@ class PredictRequest(BaseModel):
 
     t: list[int] = Field(
         ...,
-        description=(
-            "Days in milk (DIM) at which to evaluate"
-            " the MilkBot model."
-        ),
+        description=("Days in milk (DIM) at which to evaluate the MilkBot model."),
         examples=[[1, 30, 60, 90, 120, 150, 200, 250, 305]],
     )
     a: float = Field(
@@ -194,9 +204,7 @@ class FitRequest(BaseModel):
         description=MILK_DESC,
         examples=[[15.0, 25.0, 30.0, 28.0, 26.0, 24.0, 22.0, 20.0, 18.0]],
     )
-    model: Literal[
-        "wood", "wilmink", "ali_schaeffer", "fischer", "milkbot"
-    ] = Field(
+    model: Literal["wood", "wilmink", "ali_schaeffer", "fischer", "milkbot"] = Field(
         default="wood",
         description=MODEL_DESC,
     )
@@ -245,9 +253,7 @@ class CharacteristicRequest(BaseModel):
         description=MILK_DESC,
         examples=[[15.0, 25.0, 30.0, 28.0, 26.0, 24.0, 22.0, 20.0, 18.0]],
     )
-    model: Literal[
-        "wood", "wilmink", "ali_schaeffer", "fischer", "milkbot"
-    ] = Field(
+    model: Literal["wood", "wilmink", "ali_schaeffer", "fischer", "milkbot"] = Field(
         default="wood",
         description=MODEL_DESC,
     )
@@ -352,7 +358,11 @@ def predict(request: PredictRequest) -> dict[str, list[float]]:
     """
     t = np.array(request.t)
     predictions = milkbot_model(
-        t, request.a, request.b, request.c, request.d,
+        t,
+        request.a,
+        request.b,
+        request.c,
+        request.d,
     )
     return {"predictions": predictions.tolist()}
 
@@ -433,7 +443,7 @@ def test_interval(
         "results": [
             {
                 "test_id": row["TestId"],
-                "total_305_yield": float(row["Total305Yield"]),
+                "total_305_yield": float(str(row["Total305Yield"])),
             }
             for _, row in result_df.iterrows()
         ],

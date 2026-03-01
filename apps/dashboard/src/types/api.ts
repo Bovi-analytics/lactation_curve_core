@@ -1,24 +1,25 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 /* ------------------------------------------------------------------ */
 /*  Shared enums — mirror the FastAPI Literal types exactly            */
 /* ------------------------------------------------------------------ */
 
-export const ModelSchema = z.enum([
-  'wood', 'wilmink', 'ali_schaeffer', 'fischer', 'milkbot',
-]);
+export const ModelSchema = z.enum(["wood", "wilmink", "ali_schaeffer", "fischer", "milkbot"]);
 
 export const CharacteristicSchema = z.enum([
-  'time_to_peak', 'peak_yield', 'cumulative_milk_yield', 'persistency',
+  "time_to_peak",
+  "peak_yield",
+  "cumulative_milk_yield",
+  "persistency",
 ]);
 
-export const BreedSchema = z.enum(['H', 'J']);
+export const BreedSchema = z.enum(["H", "J"]);
 
-export const ContinentSchema = z.enum(['USA', 'EU', 'CHEN']);
+export const ContinentSchema = z.enum(["USA", "EU", "CHEN"]);
 
-export const FittingSchema = z.enum(['frequentist']);
+export const FittingSchema = z.enum(["frequentist"]);
 
-export const PersistencyMethodSchema = z.enum(['derived', 'literature']);
+export const PersistencyMethodSchema = z.enum(["derived", "literature"]);
 
 /* Inferred types — use these in components and function signatures */
 export type Model = z.infer<typeof ModelSchema>;

@@ -34,7 +34,6 @@ Author: Meike van Leerdam, Date: 07-31-2025
 import pandas as pd
 
 
-
 def test_interval_method(
     df, days_in_milk_col=None, milking_yield_col=None, test_id_col=None, default_test_id=1
 ):
@@ -70,7 +69,8 @@ def test_interval_method(
     """
     result = []
 
-    # create a bit more flexibility in naming the columns and when only one lactation is put in without a testid
+    # create a bit more flexibility in naming the columns and
+    # when only one lactation is put in without a testid
 
     # Define accepted variations for each logical column
     # Accepted aliases (case-insensitive)
@@ -149,7 +149,3 @@ def test_interval_method(
         result.append((lactation, total_yield))
 
     return pd.DataFrame(result, columns=["TestId", "Total305Yield"])
-
-
-
-    

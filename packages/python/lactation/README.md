@@ -87,7 +87,7 @@ The package is organized into three main modules:
 * The key can be requested by sending an email to Jim Ehrlich [jehrlich@MilkBot.com](mailto:jehrlich@MilkBot.com).
 * More information about the API can be found [here](https://api.milkbot.com/).
 
-# Citation 
+# Citation
 
 **Citing the lactationcurve package**
 

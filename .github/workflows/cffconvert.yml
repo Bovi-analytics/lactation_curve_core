@@ -4,9 +4,9 @@ on:
   push:
     paths:
       - CITATION.cff
-  
+
   pull_request:
-    paths: 
+    paths:
       - CITATION.cff
 
 jobs:

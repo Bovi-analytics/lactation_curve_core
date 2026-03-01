@@ -1,12 +1,12 @@
-import { useQueries } from '@tanstack/react-query';
-import { getCharacteristic } from '@/lib/api-client';
-import type { Model, Characteristic } from '@/types/api';
+import { useQueries } from "@tanstack/react-query";
+import { getCharacteristic } from "@/lib/api-client";
+import type { Model, Characteristic } from "@/types/api";
 
 const ALL_CHARACTERISTICS: Characteristic[] = [
-  'peak_yield',
-  'time_to_peak',
-  'cumulative_milk_yield',
-  'persistency',
+  "peak_yield",
+  "time_to_peak",
+  "cumulative_milk_yield",
+  "persistency",
 ];
 
 interface UseCharacteristicsParams {
@@ -24,7 +24,7 @@ export function useCharacteristics({
 }: UseCharacteristicsParams) {
   const results = useQueries({
     queries: ALL_CHARACTERISTICS.map((characteristic) => ({
-      queryKey: ['characteristic', model, characteristic, dim, milkrecordings] as const,
+      queryKey: ["characteristic", model, characteristic, dim, milkrecordings] as const,
       queryFn: () =>
         getCharacteristic({
           model,

@@ -1,10 +1,10 @@
-import type { ReactElement } from 'react';
+import type { ReactElement } from "react";
 
 const CHARACTERISTIC_META: Record<string, { label: string; unit: string }> = {
-  peak_yield: { label: 'Peak Yield', unit: 'kg/day' },
-  time_to_peak: { label: 'Time to Peak', unit: 'days' },
-  cumulative_milk_yield: { label: 'Cumulative Yield', unit: 'kg' },
-  persistency: { label: 'Persistency', unit: '' },
+  peak_yield: { label: "Peak Yield", unit: "kg/day" },
+  time_to_peak: { label: "Time to Peak", unit: "days" },
+  cumulative_milk_yield: { label: "Cumulative Yield", unit: "kg" },
+  persistency: { label: "Persistency", unit: "" },
 };
 
 interface StatCardProps {
@@ -14,7 +14,7 @@ interface StatCardProps {
 }
 
 export function StatCard({ name, value, isLoading }: StatCardProps): ReactElement {
-  const meta = CHARACTERISTIC_META[name] ?? { label: name, unit: '' };
+  const meta = CHARACTERISTIC_META[name] ?? { label: name, unit: "" };
 
   return (
     <div className="rounded-lg border border-border bg-card p-4">
@@ -26,9 +26,7 @@ export function StatCard({ name, value, isLoading }: StatCardProps): ReactElemen
           <p className="text-2xl font-bold text-foreground">
             {value.toFixed(1)}
             {meta.unit && (
-              <span className="ml-1 text-sm font-normal text-muted-foreground">
-                {meta.unit}
-              </span>
+              <span className="ml-1 text-sm font-normal text-muted-foreground">{meta.unit}</span>
             )}
           </p>
         ) : (

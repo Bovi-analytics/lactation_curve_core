@@ -22,7 +22,7 @@ repos:
     hooks:
       - id: detect-secrets
         args: ['--baseline', '.secrets.baseline']
-        exclude: (bun\.lock|uv\.lock)$
+        exclude: (bun\.lock|uv\.lock|\.tsbuildinfo)$
 
   # ── Python formatting + linting ─────────────────────────────
   - repo: https://github.com/astral-sh/ruff-pre-commit
@@ -47,7 +47,7 @@ repos:
         name: prettier
         entry: bash -c 'cd apps/dashboard && bun run format:check'
         language: system
-        types_or: [typescript, tsx, javascript, jsx, json, css]
+        types_or: [ts, tsx, javascript, jsx, json, css]
         files: ^apps/dashboard/
         pass_filenames: false
 
@@ -56,7 +56,7 @@ repos:
         name: eslint
         entry: bash -c 'cd apps/dashboard && bun run lint'
         language: system
-        types_or: [typescript, tsx, javascript, jsx]
+        types_or: [ts, tsx, javascript, jsx]
         files: ^apps/dashboard/src/
         pass_filenames: false
 
@@ -65,6 +65,6 @@ repos:
         name: tsc
         entry: bash -c 'cd apps/dashboard && bun run typecheck'
         language: system
-        types_or: [typescript, tsx]
+        types_or: [ts, tsx]
         files: ^apps/dashboard/
         pass_filenames: false

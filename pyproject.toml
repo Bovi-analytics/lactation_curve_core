@@ -9,7 +9,19 @@ dependencies = ["lactationcurve>=0.1.0"]
 lactationcurve = { path = "packages/python/lactation", editable = true }
 
 [dependency-groups]
-dev = ["pytest>=8.0.0", "ruff>=0.1.0", "python-dotenv>=1.0.0", "lactationcurve"]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.1.0",
+    "python-dotenv>=1.0.0",
+    "lactationcurve",
+    "pre-commit>=4.5.1",
+    "detect-secrets>=1.5.0",
+    "basedpyright>=1.38.2",
+    "fastapi>=0.115.0",
+    "httpx>=0.27.0",
+    "pydantic>=2.0.0",
+    "azure-functions>=1.21.0",
+]
 
 [tool.ruff]
 target-version = "py312"
@@ -17,6 +29,18 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
+
+[tool.basedpyright]
+typeCheckingMode = "basic"
+pythonVersion = "3.12"
+pythonPlatform = "All"
+include = [
+    "packages/python/lactation/src",
+    "apps/lactation_curves",
+    "apps/milkbot",
+    "tests",
+]
+extraPaths = ["packages/python/lactation/src"]
 
 [tool.pytest.ini_options]
 pythonpath = ["packages/python/lactation/src"]

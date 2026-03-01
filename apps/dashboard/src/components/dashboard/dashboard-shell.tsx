@@ -1,5 +1,5 @@
-import type { ReactElement, ReactNode } from 'react';
-import { Sidebar } from './sidebar';
+import type { ReactElement, ReactNode } from "react";
+import { Sidebar } from "./sidebar";
 
 interface DashboardShellProps {
   readonly children: ReactNode;

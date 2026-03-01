@@ -34,7 +34,6 @@ Last update: 11-feb-2025
 """
 
 import numpy as np
-from numpy import ndarray
 from sympy import (
     diff,
     exp,
@@ -238,8 +237,9 @@ def lactation_curve_characteristic_function(
         else:
             raise Exception("No positive real solution for time to peak and peak yield found")
 
-    # find function for cumulative milk yield of the lactation. 
-    # A lactation length of 305 is the default, but this value can also be provided as a parameter in the characteristic function.
+    # find function for cumulative milk yield of the lactation.
+    # A lactation length of 305 is the default, but this value can
+    # also be provided as a parameter in the characteristic function.
     cum_my_expr = integrate(function, (t, 0, lactation_length))
 
     # Sorted parameter list (exclude t)
@@ -313,7 +313,8 @@ def calculate_characteristic(
         milkrecordings (Float): Milk recordings (kg or lbs) for each DIM.
         model (str): Model name. Supported for this function:
             'milkbot', 'wood', 'wilmink', 'ali_schaeffer', 'fischer'.
-        characteristic (str): One of 'time_to_peak', 'peak_yield', 'cumulative_milk_yield', 'persistency'.
+        characteristic (str): One of 'time_to_peak', 'peak_yield',
+            'cumulative_milk_yield', 'persistency'.
         fitting (str): 'frequentist' (default) or 'bayesian'.
         key (str | None): API key for MilkBot Bayesian fitting.
         parity (Int): Parity of the cow; values above 3 are considered as 3 (Bayesian).
@@ -344,20 +345,27 @@ def calculate_characteristic(
         lactation_length=lactation_length,
     )
 
-    dim: ndarray = inputs.dim
-    milkrecordings: ndarray = inputs.milkrecordings
-    model: str | None = inputs.model
-    fitting: str | None = inputs.fitting
-    breed: str | None = inputs.breed
-    parity: int | None = inputs.parity
-    continent: str | None = inputs.continent
-    persistency_method: str | None = inputs.persistency_method
-    lactation_length: int | str | None = inputs.lactation_length
+    dim = inputs.dim
+    milkrecordings = inputs.milkrecordings
+    model = inputs.model
+    fitting = inputs.fitting
+    breed = inputs.breed
+    parity = inputs.parity
+    continent = inputs.continent
+    persistency_method = inputs.persistency_method
+    lactation_length = inputs.lactation_length
+
+    # After validation, these fields are guaranteed non-None for the paths below
+    assert model is not None
+    assert fitting is not None
 
     if model not in ["milkbot", "wood", "wilmink", "ali_schaeffer", "fischer"]:
-        raise Exception(
-            "this function currently only works for the milkbot, wood, wilmink, ali_schaeffer and fischer models"
+        msg = (
+            "this function currently only works for"
+            " the milkbot, wood, wilmink,"
+            " ali_schaeffer and fischer models"
         )
+        raise Exception(msg)
 
     characteristic_options: list[str] = [
         "time_to_peak",
@@ -370,9 +378,11 @@ def calculate_characteristic(
         if fitting == "frequentist":
             # Get fitted parameters from your fitting function
             fitted_params = get_lc_parameters(dim, milkrecordings, model)
+            assert fitted_params is not None
 
             if characteristic != "persistency":
                 # Try symbolic formula first
+                assert isinstance(lactation_length, int)
                 expr, params, fn = lactation_curve_characteristic_function(
                     model, characteristic, lactation_length
                 )
@@ -387,6 +397,9 @@ def calculate_characteristic(
                     or not np.isfinite(value)
                     or (characteristic == "time_to_peak" and value <= 0)
                 ):
+                    assert parity is not None
+                    assert breed is not None
+                    assert continent is not None
                     if characteristic == "time_to_peak":
                         value = numeric_time_to_peak(
                             dim,
@@ -444,12 +457,23 @@ def calculate_characteristic(
                         value = persistency_wood(fitted_params[1], fitted_params[2])
 
                     elif model == "milkbot":
+                        assert len(fitted_params) >= 4
                         value = persistency_milkbot(fitted_params[3])
 
                     else:
-                        raise Exception(
-                            'Currently only the Wood model and MilkBot model have a separate model function from the literature integrated for persistency. if persistency="derived" is selected, persistency can be calculated for every model as the average slope of the lactation after the peak.'
+                        msg = (
+                            "Currently only the Wood model"
+                            " and MilkBot model have a"
+                            " separate model function from"
+                            " the literature integrated for"
+                            " persistency. if"
+                            ' persistency="derived" is'
+                            " selected, persistency can be"
+                            " calculated for every model as"
+                            " the average slope of the"
+                            " lactation after the peak."
                         )
+                        raise Exception(msg)
             try:
                 return float(value)
             except ValueError:
@@ -462,6 +486,9 @@ def calculate_characteristic(
                 if key is None:
                     raise Exception("Key needed to use Bayesian fitting engine MilkBot")
                 else:
+                    assert parity is not None
+                    assert breed is not None
+                    assert continent is not None
                     fitted_params_bayes = bayesian_fit_milkbot_single_lactation(
                         dim, milkrecordings, key, parity, breed, continent
                     )
@@ -577,7 +604,7 @@ def numeric_cumulative_yield(
         float: Cumulative milk yield over the specified horizon.
     """
     y = fit_lactation_curve(dim, milkrecordings, model, fitting=fitting, **kwargs)
-    return np.trapezoid(y[:lactation_length], dx=1)
+    return float(np.trapezoid(y[:lactation_length], dx=1))
 
 
 def numeric_peak_yield(

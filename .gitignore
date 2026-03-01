@@ -20,4 +20,5 @@ wheels/
 .env.local
 node_modules
 .next
+*.tsbuildinfo
 tests/lactationcurve/test_dotenv.py
