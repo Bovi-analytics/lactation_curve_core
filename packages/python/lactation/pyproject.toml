@@ -50,10 +50,3 @@ testpaths = ["../../../tests"]
 
 [tool.setuptools.package-data]
 lactation = ["README.md"]
-
-[tool.semantic_release]
-version_toml = ["packages/python/lactation/pyproject.toml:project.version"]
-branch = "master"
-commit_message = "chore(release): {version} [skip ci]"
-build_command = "cd packages/python/lactation && uv build"
-changelog.default_templates.changelog_file = ""

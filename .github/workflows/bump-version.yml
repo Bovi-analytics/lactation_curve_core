@@ -29,7 +29,7 @@ jobs:
 
       - name: Determine version bump
         run: |
-          if semantic-release -c packages/python/lactation/pyproject.toml --noop version --print 2>&1 | grep -q "No release will be made"; then
+          if semantic-release --noop version --print 2>&1 | grep -q "No release will be made"; then
             echo "::error::No release triggered. Use conventional commit prefixes: 'feat: ...' (minor bump), 'fix: ...' (patch bump), or 'feat!: ...' / 'BREAKING CHANGE:' (major bump)."
             exit 1
           fi
@@ -37,4 +37,4 @@ jobs:
       - name: Bump version, tag, and create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: semantic-release -c packages/python/lactation/pyproject.toml version --vcs-release --push
+        run: semantic-release version --no-changelog --vcs-release --push

@@ -45,3 +45,14 @@ extraPaths = ["packages/python/lactation/src"]
 [tool.pytest.ini_options]
 pythonpath = ["packages/python/lactation/src"]
 testpaths = ["tests"]
+
+[tool.semantic_release]
+version_toml = ["packages/python/lactation/pyproject.toml:project.version"]
+branch = "master"
+commit_message = "chore(release): {version} [skip ci]"
+build_command = "cd packages/python/lactation && uv build"
+commit_parser = "conventional-monorepo"
+tag_format = "v{version}"
+
+[tool.semantic_release.commit_parser_options]
+path_filters = ["packages/python/lactation"]
