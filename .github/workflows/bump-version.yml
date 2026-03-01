@@ -29,8 +29,21 @@ jobs:
 
       - name: Determine version bump
         run: |
-          if semantic-release --noop version --print 2>&1 | grep -q "No release will be made"; then
-            echo "::error::No release triggered. Use conventional commit prefixes: 'feat: ...' (minor bump), 'fix: ...' (patch bump), or 'feat!: ...' / 'BREAKING CHANGE:' (major bump)."
+          OUTPUT=$(semantic-release --noop version --print 2>&1)
+          if echo "$OUTPUT" | grep -q "No release will be made"; then
+            echo "::error::No release triggered."
+            echo ""
+            echo "Possible reasons:"
+            if echo "$OUTPUT" | grep -q "No commit since last release"; then
+              echo "  - No new commits since last release tag"
+            fi
+            if ! echo "$OUTPUT" | grep -qi "feat\|fix\|breaking"; then
+              echo "  - No commits with release prefixes (feat:, fix:, feat!:, BREAKING CHANGE:)"
+            fi
+            echo "  - Commits did not modify files in packages/python/lactation/ (path filter)"
+            echo ""
+            echo "Full output:"
+            echo "$OUTPUT"
             exit 1
           fi
 
