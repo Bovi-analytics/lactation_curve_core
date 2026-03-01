@@ -28,15 +28,13 @@ jobs:
         run: uv tool install "python-semantic-release>=10.0.0,<11"
 
       - name: Determine version bump
-        working-directory: packages/python/lactation
         run: |
-          if semantic-release --noop version --print 2>&1 | grep -q "No release will be made"; then
+          if semantic-release -c packages/python/lactation/pyproject.toml --noop version --print 2>&1 | grep -q "No release will be made"; then
             echo "::error::No release triggered. Use conventional commit prefixes: 'feat: ...' (minor bump), 'fix: ...' (patch bump), or 'feat!: ...' / 'BREAKING CHANGE:' (major bump)."
             exit 1
           fi
 
       - name: Bump version, tag, and create GitHub Release
-        working-directory: packages/python/lactation
         env:
           GH_TOKEN: ${{ github.token }}
-        run: semantic-release version --vcs-release --push
+        run: semantic-release -c packages/python/lactation/pyproject.toml version --vcs-release --push
