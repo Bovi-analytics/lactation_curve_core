@@ -2,7 +2,7 @@
 # Utility functions
 Input validation and tabular schema normalization for lactation curve workflows.
 
-This module provides two small utilities that are used by
+This module has two small utilities that are used by
 `lactationcurve.fitting.lactation_curve_fitting` and by
 'lactationcurve.characteristics.lactation_curve_characteristics'
 to ensure consistent input handling:
