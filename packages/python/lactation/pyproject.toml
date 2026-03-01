@@ -1,6 +1,6 @@
 [project]
 name = "lactationcurve"
-version = "0.1.1"
+version = "1.0.0"
 license = "MIT"
 description = "Lactation curve fitting and analysis library"
 readme = "README.md"
@@ -56,3 +56,4 @@ version_toml = ["pyproject.toml:project.version"]
 branch = "master"
 commit_message = "chore(release): {version} [skip ci]"
 build_command = "uv build"
+changelog.default_templates.changelog_file = ""
