@@ -70,12 +70,14 @@ source = { virtual = "." }
 dependencies = [
     { name = "pulumi" },
     { name = "pulumi-azure-native" },
+    { name = "python-dotenv" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "pulumi", specifier = ">=3.0.0,<4.0.0" },
     { name = "pulumi-azure-native", specifier = ">=3.0.0,<4.0.0" },
+    { name = "python-dotenv", specifier = ">=1.2.1" },
 ]
 
 [package.metadata.requires-dev]
@@ -147,6 +149,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/1e/77/180051b35654b6d84be8b7388617961335b24cc0c1ff077305df32c828b3/pulumi_azure_native-3.13.0.tar.gz", hash = "sha256:20c9f31a59843d659cbdb748ccd18f58e47bec959a50f02421ee1a5cccac9f67", size = 12575838, upload-time = "2026-01-28T20:30:50.809Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e7/2f/b9f81eb6a8d16910c4e31f1af5fca9b173d05675b349a4173ded9c386b41/pulumi_azure_native-3.13.0-py3-none-any.whl", hash = "sha256:416f0485bb9db56378cf0d253e3c20c9f79db4bdee82a02f250a8386e1557b38", size = 21152396, upload-time = "2026-01-28T20:30:48.235Z" },
+]
+
+[[package]]
+name = "python-dotenv"
+version = "1.2.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f0/26/19cadc79a718c5edbec86fd4919a6b6d3f681039a2f6d66d14be94e75fb9/python_dotenv-1.2.1.tar.gz", hash = "sha256:42667e897e16ab0d66954af0e60a9caa94f0fd4ecf3aaf6d2d260eec1aa36ad6", size = 44221, upload-time = "2025-10-26T15:12:10.434Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/14/1b/a298b06749107c305e1fe0f814c6c74aea7b2f1e10989cb30f544a1b3253/python_dotenv-1.2.1-py3-none-any.whl", hash = "sha256:b81ee9561e9ca4004139c6cbba3a238c32b03e4894671e181b671e8cb8425d61", size = 21230, upload-time = "2025-10-26T15:12:09.109Z" },
 ]
 
 [[package]]

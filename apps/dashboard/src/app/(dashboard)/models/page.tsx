@@ -1,17 +1,17 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import type { ReactElement } from 'react';
-import { Checkbox } from '@mantine/core';
-import { ALL_MODELS, MODEL_METADATA } from '@/data/model-metadata';
-import { EXAMPLE_LACTATIONS, DEFAULT_LACTATION } from '@/data/example-lactations';
-import type { Model } from '@/types/api';
-import type { ExampleLactation } from '@/data/example-lactations';
-import { useComparison } from './hooks/use-comparison';
-import { useCharacteristics } from './hooks/use-characteristics';
-import { ModelInfo } from './components/model-info';
-import { StatCard } from './components/stat-card';
-import { LactationCurveChart } from '@/components/charts/lactation-curve-chart';
+import { useState } from "react";
+import type { ReactElement } from "react";
+import { Checkbox } from "@mantine/core";
+import { ALL_MODELS, MODEL_METADATA } from "@/data/model-metadata";
+import { EXAMPLE_LACTATIONS, DEFAULT_LACTATION } from "@/data/example-lactations";
+import type { Model } from "@/types/api";
+import type { ExampleLactation } from "@/data/example-lactations";
+import { useComparison } from "./hooks/use-comparison";
+import { useCharacteristics } from "./hooks/use-characteristics";
+import { ModelInfo } from "./components/model-info";
+import { StatCard } from "./components/stat-card";
+import { LactationCurveChart } from "@/components/charts/lactation-curve-chart";
 
 /* ------------------------------------------------------------------ */
 /*  Chart section — fits all selected models in parallel               */
@@ -73,10 +73,7 @@ interface ModelCharacteristicsProps {
   readonly lactation: ExampleLactation;
 }
 
-function ModelCharacteristics({
-  model,
-  lactation,
-}: ModelCharacteristicsProps): ReactElement {
+function ModelCharacteristics({ model, lactation }: ModelCharacteristicsProps): ReactElement {
   const metadata = MODEL_METADATA[model];
   const { characteristics } = useCharacteristics({
     model,
@@ -92,12 +89,7 @@ function ModelCharacteristics({
       </h3>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {characteristics.map((c) => (
-          <StatCard
-            key={c.name}
-            name={c.name}
-            value={c.value}
-            isLoading={c.isLoading}
-          />
+          <StatCard key={c.name} name={c.name} value={c.value} isLoading={c.isLoading} />
         ))}
       </div>
     </div>
@@ -109,15 +101,12 @@ function ModelCharacteristics({
 /* ------------------------------------------------------------------ */
 
 export default function ModelsPage(): ReactElement {
-  const [selectedModels, setSelectedModels] = useState<Model[]>(['wood']);
-  const [activeLactation, setActiveLactation] =
-    useState<ExampleLactation>(DEFAULT_LACTATION);
+  const [selectedModels, setSelectedModels] = useState<Model[]>(["wood"]);
+  const [activeLactation, setActiveLactation] = useState<ExampleLactation>(DEFAULT_LACTATION);
 
   function handleToggleModel(model: Model) {
     setSelectedModels((prev) =>
-      prev.includes(model)
-        ? prev.filter((m) => m !== model)
-        : [...prev, model],
+      prev.includes(model) ? prev.filter((m) => m !== model) : [...prev, model]
     );
   }
 
@@ -135,15 +124,11 @@ export default function ModelsPage(): ReactElement {
       <div className="flex flex-wrap items-center gap-6">
         {/* Dataset selector */}
         <div className="flex items-center gap-3">
-          <label className="text-sm font-medium text-muted-foreground">
-            Dataset:
-          </label>
+          <label className="text-sm font-medium text-muted-foreground">Dataset:</label>
           <select
             value={activeLactation.id}
             onChange={(e) => {
-              const found = EXAMPLE_LACTATIONS.find(
-                (l) => l.id === e.target.value,
-              );
+              const found = EXAMPLE_LACTATIONS.find((l) => l.id === e.target.value);
               if (found) setActiveLactation(found);
             }}
             className="rounded-md border border-border bg-card px-3 py-1.5 text-sm text-foreground"
@@ -173,11 +158,7 @@ export default function ModelsPage(): ReactElement {
 
       {/* Characteristics for each selected model */}
       {selectedModels.map((model) => (
-        <ModelCharacteristics
-          key={model}
-          model={model}
-          lactation={activeLactation}
-        />
+        <ModelCharacteristics key={model} model={model} lactation={activeLactation} />
       ))}
 
       {/* Chart */}

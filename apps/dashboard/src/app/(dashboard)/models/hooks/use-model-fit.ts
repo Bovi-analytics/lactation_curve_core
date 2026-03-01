@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
-import { fitModel } from '@/lib/api-client';
-import type { Model, FitResponse } from '@/types/api';
+import { useQuery } from "@tanstack/react-query";
+import { fitModel } from "@/lib/api-client";
+import type { Model, FitResponse } from "@/types/api";
 
 interface UseModelFitParams {
   readonly model: Model;
@@ -10,7 +10,7 @@ interface UseModelFitParams {
 
 export function useModelFit({ model, dim, milkrecordings }: UseModelFitParams) {
   return useQuery<FitResponse>({
-    queryKey: ['fit', model, dim, milkrecordings],
+    queryKey: ["fit", model, dim, milkrecordings],
     queryFn: () =>
       fitModel({
         model,

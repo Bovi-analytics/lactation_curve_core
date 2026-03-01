@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import type { ReactElement, ReactNode } from 'react';
-import { MantineProvider, createTheme } from '@mantine/core';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useState } from "react";
+import type { ReactElement, ReactNode } from "react";
+import { MantineProvider, createTheme } from "@mantine/core";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const theme = createTheme({
-  primaryColor: 'blue',
-  defaultRadius: 'md',
-  fontFamily: 'inherit',
+  primaryColor: "blue",
+  defaultRadius: "md",
+  fontFamily: "inherit",
 });
 
 interface ProvidersProps {

@@ -20,9 +20,16 @@ def test_fit_defaults(api: httpx.Client, sample_data: dict):
     assert len(r.json()["predictions"]) == 305
 
 
-@pytest.mark.parametrize("model", [
-    "wood", "wilmink", "ali_schaeffer", "fischer", "milkbot",
-])
+@pytest.mark.parametrize(
+    "model",
+    [
+        "wood",
+        "wilmink",
+        "ali_schaeffer",
+        "fischer",
+        "milkbot",
+    ],
+)
 def test_fit_all_models(api: httpx.Client, sample_data: dict, model: str):
     r = api.post("/fit", json={**sample_data, "model": model})
     assert r.status_code == 200
@@ -55,10 +62,13 @@ def test_fit_invalid_model(api: httpx.Client, sample_data: dict):
 
 def test_fit_mismatched_lengths(api: httpx.Client):
     """dim and milkrecordings with different lengths should return 422."""
-    r = api.post("/fit", json={
-        "dim": [10, 30, 60, 90],
-        "milkrecordings": [15.0, 25.0],
-    })
+    r = api.post(
+        "/fit",
+        json={
+            "dim": [10, 30, 60, 90],
+            "milkrecordings": [15.0, 25.0],
+        },
+    )
     assert r.status_code == 422
 
 

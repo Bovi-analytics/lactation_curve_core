@@ -1,5 +1,5 @@
-import type { LucideIcon } from 'lucide-react';
-import { FlaskConical, Upload } from 'lucide-react';
+import type { LucideIcon } from "lucide-react";
+import { FlaskConical, Upload } from "lucide-react";
 
 export interface NavigationItem {
   readonly label: string;
@@ -8,6 +8,6 @@ export interface NavigationItem {
 }
 
 export const DASHBOARD_NAVIGATION: readonly NavigationItem[] = [
-  { label: 'Models', href: '/models', icon: FlaskConical },
-  { label: 'Playground', href: '/playground', icon: Upload },
+  { label: "Models", href: "/models", icon: FlaskConical },
+  { label: "Playground", href: "/playground", icon: Upload },
 ];

@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import type { ReactElement } from 'react';
+import type { ReactElement } from "react";
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -11,7 +11,7 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-} from 'recharts';
+} from "recharts";
 
 /* ------------------------------------------------------------------ */
 /*  Type definitions for the chart's input data                        */
@@ -64,8 +64,8 @@ export function LactationCurveChart({
         <XAxis
           dataKey="dim"
           type="number"
-          domain={[0, 'dataMax']}
-          label={{ value: 'Days in Milk', position: 'bottom', offset: 0 }}
+          domain={[0, "dataMax"]}
+          label={{ value: "Days in Milk", position: "bottom", offset: 0 }}
           stroke="hsl(var(--muted-foreground))"
           fontSize={12}
         />
@@ -74,9 +74,9 @@ export function LactationCurveChart({
           dataKey="yield"
           type="number"
           label={{
-            value: 'Milk Yield (kg/day)',
+            value: "Milk Yield (kg/day)",
             angle: -90,
-            position: 'insideLeft',
+            position: "insideLeft",
             offset: 10,
           }}
           stroke="hsl(var(--muted-foreground))"
@@ -85,10 +85,10 @@ export function LactationCurveChart({
 
         <Tooltip
           contentStyle={{
-            backgroundColor: 'hsl(var(--card))',
-            border: '1px solid hsl(var(--border))',
-            borderRadius: '0.5rem',
-            color: 'hsl(var(--card-foreground))',
+            backgroundColor: "hsl(var(--card))",
+            border: "1px solid hsl(var(--border))",
+            borderRadius: "0.5rem",
+            color: "hsl(var(--card-foreground))",
             fontSize: 12,
           }}
         />
@@ -112,7 +112,7 @@ export function LactationCurveChart({
         {/* Raw observations — scatter points */}
         {observations.length > 0 && (
           <Scatter
-            data={observations}
+            data={[...observations]}
             dataKey="yield"
             name="Observations"
             fill="hsl(var(--foreground))"
@@ -123,7 +123,7 @@ export function LactationCurveChart({
         {/* Annotations — highlighted scatter points with labels */}
         {annotations.length > 0 && (
           <Scatter
-            data={annotations}
+            data={[...annotations]}
             dataKey="yield"
             name="Annotations"
             fill="hsl(var(--accent))"

@@ -1,4 +1,4 @@
-'''
+"""
 Lactation curve fitting module.
 
 This module provides functions for fitting lactation curve models to dairy cow
@@ -27,8 +27,8 @@ Pre-defined lactation curve models
     - Dijkstra
     - Prasad
 
-Author: Meike van Leerdam  
-Date: 12-8-2025  
+Author: Meike van Leerdam
+Date: 12-8-2025
 Last update: 11-feb-2025
 
 Requires
@@ -40,15 +40,17 @@ Requires
 
 Public functions
 ----------------
-- fit_lactation_curve(dim, milkrecordings, model="wood", fitting="frequentist", breed="H", parity=3, continent="USA", key=None)  
+- fit_lactation_curve(dim, milkrecordings, model="wood",
+  fitting="frequentist", breed="H", parity=3,
+  continent="USA", key=None)
   Fit a lactation curve to the provided data and return predicted milk yield
   for each day in milk (DIM) in the range 1–305 (or up to the maximum DIM if it exceeds 305).
 
-- get_lc_parameters(dim, milkrecordings, model="wood")  
+- get_lc_parameters(dim, milkrecordings, model="wood")
   Fit a lactation curve to the provided data and return model parameters using
   frequentist statistics: minimize/curve_fit.
 
-- get_lc_parameters_least_squares(dim, milkrecordings, model="milkbot")  
+- get_lc_parameters_least_squares(dim, milkrecordings, model="milkbot")
   Fit a lactation curve to the provided data and return model parameters using
   least-squares estimation (frequentist).
 
@@ -57,12 +59,15 @@ Notes
 - Units: DIM in days, milk in kg or lbs.
 - Input validation and normalization are delegated to
   `lactationcurve.preprocessing.validate_and_prepare_inputs`.
-'''
+"""
 
 # packages
+from __future__ import annotations
+
 import numpy as np
 import requests
 from scipy.optimize import curve_fit, least_squares, minimize
+
 from lactationcurve.preprocessing import validate_and_prepare_inputs
 
 
@@ -349,6 +354,7 @@ def milkbot_objective(par, x, y):
     """
     return np.sum((y - milkbot_model(x, *par)) ** 2)
 
+
 def residuals_milkbot(par, x, y):
     """Residuals for least-squares fitting of the MilkBot model.
 
@@ -425,7 +431,9 @@ def fit_lactation_curve(
 
     if fitting == "frequentist":
         if model == "wood":
-            a_w, b_w, c_w = get_lc_parameters(dim, milkrecordings, model)
+            params = get_lc_parameters(dim, milkrecordings, model)
+            assert params is not None, "Failed to fit Wood model parameters"
+            a_w, b_w, c_w = params[0], params[1], params[2]
             if max(dim) > 305:
                 t_range = np.arange(1, (max(dim) + 1))
                 y_w = wood_model(t_range, a_w, b_w, c_w)
@@ -435,7 +443,9 @@ def fit_lactation_curve(
             return y_w
 
         elif model == "wilmink":
-            a_wil, b_wil, c_wil, k_wil = get_lc_parameters(dim, milkrecordings, model)
+            params = get_lc_parameters(dim, milkrecordings, model)
+            assert params is not None, "Failed to fit Wilmink model parameters"
+            a_wil, b_wil, c_wil, k_wil = (params[0], params[1], params[2], params[3])
             if max(dim) > 305:
                 t_range = np.arange(1, (max(dim) + 1))
                 y_wil = wilmink_model(t_range, a_wil, b_wil, c_wil, k_wil)
@@ -445,7 +455,9 @@ def fit_lactation_curve(
             return y_wil
 
         elif model == "ali_schaeffer":
-            a_as, b_as, c_as, d_as, k_as = get_lc_parameters(dim, milkrecordings, model)
+            params = get_lc_parameters(dim, milkrecordings, model)
+            assert params is not None, "Failed to fit Ali & Schaeffer model parameters"
+            a_as, b_as, c_as, d_as, k_as = (params[0], params[1], params[2], params[3], params[4])
             if max(dim) > 305:
                 t_range = np.arange(1, (max(dim) + 1))
                 y_as = ali_schaeffer_model(t_range, a_as, b_as, c_as, d_as, k_as)
@@ -455,7 +467,9 @@ def fit_lactation_curve(
             return y_as
 
         elif model == "fischer":
-            a_f, b_f, c_f = get_lc_parameters(dim, milkrecordings, model)
+            params = get_lc_parameters(dim, milkrecordings, model)
+            assert params is not None, "Failed to fit Fischer model parameters"
+            a_f, b_f, c_f = params[0], params[1], params[2]
             if max(dim) > 305:
                 t_range = np.arange(1, (max(dim) + 1))
                 y_f = fischer_model(t_range, a_f, b_f, c_f)
@@ -465,7 +479,9 @@ def fit_lactation_curve(
             return y_f
 
         elif model == "milkbot":
-            a_mb, b_mb, c_mb, d_mb = get_lc_parameters(dim, milkrecordings, model)
+            params = get_lc_parameters(dim, milkrecordings, model)
+            assert params is not None, "Failed to fit MilkBot model parameters"
+            a_mb, b_mb, c_mb, d_mb = (params[0], params[1], params[2], params[3])
             if max(dim) > 305:
                 t_range = np.arange(1, (max(dim) + 1))
             else:
@@ -478,9 +494,12 @@ def fit_lactation_curve(
             raise Exception("Unknown model")
     else:
         if model == "milkbot":
-            if key == None:
+            if key is None:
                 raise Exception("Key needed to use Bayesian fitting engine milkbot")
             else:
+                assert parity is not None, "parity is required for Bayesian fitting"
+                assert breed is not None, "breed is required for Bayesian fitting"
+                assert continent is not None, "continent is required for Bayesian fitting"
                 parameters = bayesian_fit_milkbot_single_lactation(
                     dim, milkrecordings, key, parity, breed, continent
                 )
@@ -511,9 +530,12 @@ def get_lc_parameters_least_squares(dim, milkrecordings, model="milkbot"):
     """Fit lactation data and return model parameters (least squares; frequentist).
 
     This helper uses `scipy.optimize.least_squares` to fit the MilkBot model with bounds,
-    and returns the fitted parameters. 
-    Currently implemented only for the MilkBot model, as it is more complex and benefits from the robust optimization approach. 
-    Other models can be fitted using `get_lc_parameters` with numerical optimisation, which is generally faster for simpler models.
+    and returns the fitted parameters.
+    Currently implemented only for the MilkBot model, as it is
+    more complex and benefits from the robust optimization approach.
+    Other models can be fitted using `get_lc_parameters` with
+    numerical optimisation, which is generally faster for simpler
+    models.
 
     Args:
         dim (int): List/array of DIM values.
@@ -565,7 +587,7 @@ def get_lc_parameters_least_squares(dim, milkrecordings, model="milkbot"):
     return a_mb, b_mb, c_mb, d_mb
 
 
-def get_lc_parameters(dim, milkrecordings, model="wood"):
+def get_lc_parameters(dim, milkrecordings, model="wood") -> tuple[float, ...]:
     """Fit lactation data to a model and return fitted parameters (frequentist).
 
     Depending on `model`, this uses `scipy.optimize.minimize` and/or
@@ -634,6 +656,8 @@ def get_lc_parameters(dim, milkrecordings, model="wood"):
         mb_res = minimize(milkbot_objective, mb_guess, args=(dim, milkrecordings), bounds=mb_bounds)
         a_mb, b_mb, c_mb, d_mb = mb_res.x
         return a_mb, b_mb, c_mb, d_mb
+
+    raise ValueError(f"Unknown model: {model}")
 
 
 def get_chen_priors(parity: int) -> dict:
@@ -764,7 +788,7 @@ def bayesian_fit_milkbot_single_lactation(
             "returnInputData": False,
             "returnPath": False,
             "returnDiscriminatorPath": False,
-            # "fitEngine": "AnnealingFitter@2.0", #comment out to use the default fitter 
+            # "fitEngine": "AnnealingFitter@2.0", #comment out to use the default fitter
             # "fitObjective": "MB2@2.0",
             "preferredMilkUnit": "kg",
         },
@@ -774,6 +798,7 @@ def bayesian_fit_milkbot_single_lactation(
     # Add priors only if Chen
     # -----------------------------
     if continent == "CHEN":
+        assert parity is not None, "parity is required for Chen priors"
         payload["priors"] = get_chen_priors(parity)
 
     # -----------------------------

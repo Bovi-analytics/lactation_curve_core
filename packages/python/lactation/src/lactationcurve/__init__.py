@@ -1,6 +1,9 @@
 """
 
-A package for fitting **dairy animal lactation curves**, evaluating **lactation curve characteristics (LCCs)** (time to peak, peak yield, cumulative yield, persistency), and computing **305‑day milk yield** using the **ICAR guideline**.
+A package for fitting **dairy animal lactation curves**, evaluating
+**lactation curve characteristics (LCCs)** (time to peak, peak yield,
+cumulative yield, persistency), and computing **305-day milk yield**
+using the **ICAR guideline**.
 
 > **Contact:** Meike van Leerdam, mbv32@cornell.edu
 >
@@ -14,19 +17,23 @@ A package for fitting **dairy animal lactation curves**, evaluating **lactation 
 
 ## Main Lactation curve models implemented:
 
-MilkBot: Flexible four-parameter model describing rise, peak, and decline. (Both frequentist and Bayesian fitting
-available)
+MilkBot: Flexible four-parameter model describing rise, peak,
+and decline. (Both frequentist and Bayesian fitting available)
 
-Wood: Incomplete gamma function; most popular due to its simplicity, its stability in the presence of missing data, and its computational ease.
+Wood: Incomplete gamma function; most popular due to its simplicity,
+its stability in the presence of missing data, and its
+computational ease.
 
 Wilmink: Linear–exponential hybrid model, with fixed or estimated decay rate.
 
-Ali & Schaeffer: Polynomial–logarithmic model with a linear regression component for more complex curve shapes.
+Ali & Schaeffer: Polynomial-logarithmic model with a linear
+regression component for more complex curve shapes.
 
 Fischer: Simple exponential decay model.
 
 Additional models available for a.o. symbolic LCC derivations:
-**Brody** ,  **Sikka** ,  **Nelder** ,  **Dhanoa** ,  **Emmans** ,  **Hayashi** ,  **Rook** ,  **Dijkstra** ,  **Prasad** .
+**Brody**, **Sikka**, **Nelder**, **Dhanoa**, **Emmans**,
+**Hayashi**, **Rook**, **Dijkstra**, **Prasad**.
 
 ---
 
@@ -89,12 +96,20 @@ The package is organized into three main modules:
 
 ## Bayesian Fitting (MilkBot API)
 
-* Set `fitting="bayesian"` and `model="milkbot"` in `fit_lactation_curve` or `calculate_characteristic`.
+* Set `fitting="bayesian"` and `model="milkbot"` in
+  `fit_lactation_curve` or `calculate_characteristic`.
 * Provide an **API key** via .env
-* Choose priors via `continent="USA" | "EU" | "CHEN"` ([CHEN](https://github.com/Bovi-analytics/Chen-et-al-2023b) supplies published priors from literature).
-* The helper `bayesian_fit_milkbot_single_lactation(...)` normalizes differing API responses.
-* The key can be requested by sending an email to Jim Ehrlich [jehrlich@MilkBot.com](mailto:jehrlich@MilkBot.com).
-* More information about the API can be found in the [API documentation](https://api.milkbot.com/), or in the corresponding [paper](https://peerj.com/articles/54/#MainContent).
+* Choose priors via `continent="USA" | "EU" | "CHEN"`
+  ([CHEN](https://github.com/Bovi-analytics/Chen-et-al-2023b)
+  supplies published priors from literature).
+* The helper `bayesian_fit_milkbot_single_lactation(...)`
+  normalizes differing API responses.
+* The key can be requested by sending an email to Jim Ehrlich
+  [jehrlich@MilkBot.com](mailto:jehrlich@MilkBot.com).
+* More information about the API can be found in the
+  [API documentation](https://api.milkbot.com/), or in the
+  corresponding
+  [paper](https://peerj.com/articles/54/#MainContent).
 
 ---
 
@@ -102,13 +117,18 @@ The package is organized into three main modules:
 
 If you use the `lactationcurve` package in your research, please consider citing it as follows:
 
-*van Leerdam, M. B., de Kok, D., Osei-Tete, J. A., & Hostens, M. (2026). Bovi-analytics/lactation_curve_core: v.0.1.0. (v.0.1.0). 
-Zenodo. https://doi.org/10.5281/zenodo.18715145*
+*van Leerdam, M. B., de Kok, D., Osei-Tete, J. A., &
+Hostens, M. (2026). Bovi-analytics/lactation_curve_core:
+v.0.1.0. (v.0.1.0). Zenodo.
+https://doi.org/10.5281/zenodo.18715145*
 
 
-If you also use the Bayesian fitting functionality that relies on the MilkBot API, please also cite the following paper:
+If you also use the Bayesian fitting functionality that relies
+on the MilkBot API, please also cite the following paper:
 
-*Ehrlich, J.L., 2013. Quantifying inter-group variability in lactation curve shape and magnitude with the MilkBot® lactation model. PeerJ 1, e54. 
+*Ehrlich, J.L., 2013. Quantifying inter-group variability
+in lactation curve shape and magnitude with the MilkBot
+lactation model. PeerJ 1, e54.
 https://doi.org/10.7717/peerj.54*
 
 ---
@@ -120,20 +140,16 @@ https://doi.org/10.7717/peerj.54*
 
 ---
 
-## Current version of the package 
+## Current version of the package
 
 """
 
 
+# import submodules to make them available at the package level
 
-#import submodules to make them available at the package level
+from . import characteristics, fitting, preprocessing
 
-from . import fitting
-from . import characteristics
-from . import preprocessing
-
-
-__all__ = ['fitting', 'characteristics', 'preprocessing']
+__all__ = ["fitting", "characteristics", "preprocessing"]
 # from .characteristics import (
 #     calculate_characteristic,
 #     lactation_curve_characteristic_function,
@@ -211,20 +227,20 @@ __all__ = ['fitting', 'characteristics', 'preprocessing']
 
 # Expose package version (try metadata, fall back to a sensible dev string)
 try:
-  from importlib.metadata import version, PackageNotFoundError
+    from importlib.metadata import PackageNotFoundError, version
 except Exception:
-  try:
-    from importlib_metadata import version, PackageNotFoundError  # type: ignore
-  except Exception:
-    version = None
-    PackageNotFoundError = Exception
+    try:
+        from importlib_metadata import PackageNotFoundError, version  # type: ignore
+    except Exception:
+        version = None
+        PackageNotFoundError = Exception
 
 if version:
-  try:
-    __version__ = version("lactationcurve")
-  except PackageNotFoundError:
-    __version__ = "0+dev"
+    try:
+        __version__ = version("lactationcurve")
+    except PackageNotFoundError:
+        __version__ = "0+dev"
 else:
-  __version__ = "0+dev"
+    __version__ = "0+dev"
 
 __all__.append("__version__")

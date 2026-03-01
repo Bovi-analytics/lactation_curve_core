@@ -6,7 +6,6 @@ import os
 import numpy as np
 import pytest
 from dotenv import find_dotenv, load_dotenv
-
 from lactationcurve.fitting import (
     ali_schaeffer_model,
     bayesian_fit_milkbot_single_lactation,
@@ -37,6 +36,7 @@ def milkbot_key() -> str:
     if not key:
         raise ValueError("milkbot_key not found in environment. Check your .env file.")
     return key
+
 
 # 1. Test on function models. Asses if each model return coherent values.
 
@@ -77,6 +77,7 @@ def test_wood_fitting():
     x = np.arange(1, 200)
     y = wood_model(x, *true_params)
     est_params = get_lc_parameters(x, y, model="wood")
+    assert est_params is not None
     assert np.allclose(est_params, true_params, rtol=0.2)
 
 
@@ -85,6 +86,7 @@ def test_wilmink_fitting():
     x = np.arange(1, 200)
     y = wilmink_model(x, *true_params)
     est_params = get_lc_parameters(x, y, model="wilmink")
+    assert est_params is not None
     assert np.allclose(est_params[:3], true_params[:3], rtol=0.2)
 
 
@@ -93,6 +95,7 @@ def test_ali_schaeffer_fitting():
     x = np.arange(1, 200)
     y = ali_schaeffer_model(x, *true_params)
     est_params = get_lc_parameters(x, y, model="ali_schaeffer")
+    assert est_params is not None
     assert np.allclose(est_params, true_params, rtol=0.3)
 
 
@@ -101,6 +104,7 @@ def test_fischer_fitting():
     x = np.arange(1, 200)
     y = fischer_model(x, *true_params)
     est_params = get_lc_parameters(x, y, model="fischer")
+    assert est_params is not None
     assert np.allclose(est_params, true_params, rtol=0.3)
 
 
@@ -109,6 +113,7 @@ def test_milkbot_fitting():
     x = np.arange(1, 200)
     y = milkbot_model(x, *true_params)
     est_params = get_lc_parameters(x, y, model="milkbot")
+    assert est_params is not None
     assert np.allclose(est_params, true_params, rtol=0.5)
 
 
@@ -119,7 +124,9 @@ def test_empty_input():
         get_lc_parameters([], [], model="wilmink")
 
 
-# 2.2 Add min points [Make sure that there are at least the number of points equal to the number of parameters - add lines 290 - 300]
+# 2.2 Add min points [Make sure that there are at least the
+# number of points equal to the number of parameters
+# - add lines 290 - 300]
 # It works for all models
 def test_single_point():
     x: list[int] = [1]
@@ -134,6 +141,7 @@ def test_non_ordered_dim():
     x = [100, 1, 50, 10]
     y = [10, 30, 20, 15]
     est_params = get_lc_parameters(x, y, model="milkbot")
+    assert est_params is not None
     assert np.all(np.isfinite(est_params))
 
 
@@ -143,6 +151,7 @@ def test_negative_milk_values():
     x = np.arange(1, 10)
     y = np.array([-1, 0, 5, 10, -3, 7, 8, 9, 0])
     est_params = get_lc_parameters(x, y, model="wood")
+    assert est_params is not None
     assert np.all(np.isfinite(est_params))
 
 
@@ -153,6 +162,7 @@ def test_fitting_with_noise():
     y = wood_model(x, 30, 0.2, 0.003)
     y_noisy = y + np.random.normal(0, 0.5, size=y.shape)
     est_params = get_lc_parameters(x, y_noisy, model="MILKBOT")
+    assert est_params is not None
     assert np.all(np.isfinite(est_params))
 
 
@@ -229,7 +239,8 @@ def test_fit_lactation_curve_milkbot_real():
 
 # 4. Tests for fit_lactation_curve
 
-# The tests ensure that fit_lactation_curve raises a ValueError when an invalid model name is provided.
+# The tests ensure that fit_lactation_curve raises a ValueError
+# when an invalid model name is provided.
 # Without this check, the function would silently return None,
 # which could lead to confusing behavior or silent errors in downstream code.
 

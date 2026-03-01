@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - master
+  pull_request:
+    branches:
+      - master
 
 permissions:
   contents: read
@@ -49,6 +52,7 @@ jobs:
           path: packages/python/lactation/site
 
   deploy:
+    if: github.event_name == 'push'
     needs: build-docs
     runs-on: ubuntu-latest
     environment:
