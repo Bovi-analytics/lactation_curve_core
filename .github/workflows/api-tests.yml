@@ -1,0 +1,50 @@
+name: API Tests
+
+on:
+  push:
+    branches:
+      - dev
+      - master
+  pull_request:
+    branches:
+      - dev
+      - master
+
+jobs:
+  api-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+
+      - name: Install app dependencies
+        working-directory: apps/lactation_curves
+        run: uv sync
+
+      - name: Start API server
+        working-directory: apps/lactation_curves
+        run: uv run python -m uvicorn main:app --host 0.0.0.0 --port 8000 &
+
+      - name: Wait for API to be ready
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/ > /dev/null 2>&1; then
+              echo "API is ready"
+              exit 0
+            fi
+            echo "Waiting for API... ($i/30)"
+            sleep 1
+          done
+          echo "API failed to start"
+          exit 1
+
+      - name: Run API tests
+        working-directory: apps/lactation_curves
+        run: uv run pytest tests/ -v
