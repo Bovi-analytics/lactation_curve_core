@@ -56,3 +56,4 @@ version_toml = ["pyproject.toml:project.version"]
 branch = "master"
 commit_message = "chore(release): {version} [skip ci]"
 build_command = "uv build"
+changelog.default_templates.changelog_file = ""
