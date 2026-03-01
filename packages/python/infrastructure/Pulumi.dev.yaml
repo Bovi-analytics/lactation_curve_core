@@ -3,3 +3,5 @@ config:
   lactationcurve:milkbotKey:
     secure: v1:vwjFtaiwKeZc0RGM:Hcp8zukUrXDFZgeQAQG35c8wm1UEHVrsWM9QZnMu/hI=
   lactationcurve:subscriptionId: ed150bce-3150-4fe4-b9e9-557ade4ccef5
+  lactationcurve:location: eastus
+  lactationcurve:resourceGroup: Bovi-Analytics-Tools
