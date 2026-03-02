@@ -4,9 +4,13 @@ on:
   push:
     branches:
       - master
+    paths:
+      - CITATION.cff
   pull_request:
     branches:
       - master
+    paths:
+      - CITATION.cff
 
 jobs:
   validate:

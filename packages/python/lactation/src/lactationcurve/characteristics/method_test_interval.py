@@ -33,10 +33,16 @@ Author: Meike van Leerdam, Date: 07-31-2025
 
 import pandas as pd
 
+from lactationcurve.preprocessing import standardize_lactation_columns
+
 
 def test_interval_method(
-    df, days_in_milk_col=None, milking_yield_col=None, test_id_col=None, default_test_id=1
-):
+    df,
+    days_in_milk_col=None,
+    milking_yield_col=None,
+    test_id_col=None,
+    default_test_id=1,
+) -> pd.DataFrame:
     """Compute 305-day total milk yield using the ICAR Test Interval Method.
 
     The method applies:
@@ -67,62 +73,25 @@ def test_interval_method(
         - At least two data points per TestId are required for trapezoidal integration;
           otherwise the lactation is skipped.
     """
+
+    # Standardize columns and filter DIM <= 305
+    df = standardize_lactation_columns(
+        df,
+        days_in_milk_col=days_in_milk_col,
+        milking_yield_col=milking_yield_col,
+        test_id_col=test_id_col,
+        default_test_id=default_test_id,
+        max_dim=305,
+    )
+
     result = []
 
-    # create a bit more flexibility in naming the columns and
-    # when only one lactation is put in without a testid
-
-    # Define accepted variations for each logical column
-    # Accepted aliases (case-insensitive)
-    aliases = {
-        "DaysInMilk": ["daysinmilk", "dim", "testday"],
-        "MilkingYield": ["milkingyield", "testdaymilkyield", "milkyield", "yield"],
-        "TestId": ["animalid", "testid", "id"],
-    }
-
-    # Create a mapping from lowercase to actual column names
-    col_lookup = {col.lower(): col for col in df.columns}
-
-    def get_col_name(override, possible_names):
-        """Return a matching actual column name from `df`, or `None` if not found.
-
-        Args:
-            override (str | None): Explicit column name provided by the user.
-            possible_names (list[str]): List of acceptable aliases (lowercase).
-
-        Returns:
-            str | None: The actual column name present in `df`, or `None` if no match.
-        """
-        if override:
-            return col_lookup.get(override.lower())
-        for name in possible_names:
-            if name in col_lookup:
-                return col_lookup[name]
-        return None
-
-    # Resolve columns
-    dim_col = get_col_name(days_in_milk_col, aliases["DaysInMilk"])
-    if not dim_col:
-        raise ValueError("No DaysInMilk column found in DataFrame.")
-
-    my_col = get_col_name(milking_yield_col, aliases["MilkingYield"])
-    if not my_col:
-        raise ValueError("No MilkingYield column found in DataFrame.")
-
-    id_col = get_col_name(test_id_col, aliases["TestId"])
-    if not id_col:
-        id_col = "TestId"
-        df[id_col] = default_test_id
-
-    # Filter out records where Day > 305
-    df = df[df[dim_col] <= 305]
-
     # Iterate over each lactation
-    for lactation in df[id_col].unique():
-        lactation_df = df[df[id_col] == lactation].copy()
+    for lactation in df["TestId"].unique():
+        lactation_df = pd.DataFrame(df[df["TestId"] == lactation])
 
         # Sort by DaysInMilk ascending
-        lactation_df.sort_values(by=dim_col, ascending=True, inplace=True)
+        lactation_df.sort_values(by="DaysInMilk", ascending=True, inplace=True)
 
         if len(lactation_df) < 2:
             print(f"Skipping TestId {lactation}: not enough data points for interpolation.")
@@ -133,14 +102,16 @@ def test_interval_method(
         end = lactation_df.iloc[-1]
 
         # Start contribution
-        MY0 = start[dim_col] * start[my_col]
+        MY0 = start["DaysInMilk"] * start["MilkingYield"]
 
         # End contribution
-        MYend = (306 - end[dim_col]) * end[my_col]
+        MYend = (306 - end["DaysInMilk"]) * end["MilkingYield"]
 
         # Intermediate trapezoidal contributions
-        lactation_df["width"] = lactation_df[dim_col].diff().shift(-1)
-        lactation_df["avg_yield"] = (lactation_df[my_col] + lactation_df[my_col].shift(-1)) / 2
+        lactation_df["width"] = lactation_df["DaysInMilk"].diff().shift(-1)
+        lactation_df["avg_yield"] = (
+            lactation_df["MilkingYield"] + lactation_df["MilkingYield"].shift(-1)
+        ) / 2
         lactation_df["trapezoid_area"] = lactation_df["width"] * lactation_df["avg_yield"]
 
         total_intermediate = lactation_df["trapezoid_area"].sum()
@@ -149,3 +120,7 @@ def test_interval_method(
         result.append((lactation, total_yield))
 
     return pd.DataFrame(result, columns=["TestId", "Total305Yield"])
+
+
+# to prevent pytest from trying to collect this function as a test
+test_interval_method.__test__ = False

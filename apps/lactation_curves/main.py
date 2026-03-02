@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from lactationcurve.characteristics import calculate_characteristic, test_interval_method
 from lactationcurve.fitting import fit_lactation_curve, milkbot_model
+from lactationcurve.preprocessing.validate_and_standardize import MilkBotPriors
 from pydantic import BaseModel, Field, ValidationError, model_validator
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -221,9 +222,25 @@ class FitRequest(BaseModel):
         ge=1,
         description="Lactation number. Parities >= 3 are one group.",
     )
-    continent: Literal["USA", "EU", "CHEN"] = Field(
+    continent: Literal["USA", "EU"] = Field(
         default="USA",
-        description="Continent for priors: USA, EU, or CHEN.",
+        description="Continent for priors: USA or EU",
+    )
+    custom_priors: MilkBotPriors | Literal["CHEN"] | None = Field(
+        default=None,
+        description=(
+            "Custom prior distributions for Bayesian"
+            " fitting. If a dict is provided, it must"
+            " be a dictionary of prior distributions"
+            " for each parameter in the model including"
+            " mean and std values. If the string 'CHEN'"
+            " is provided, the default Chen et al."
+            " priors are used."
+        ),
+    )
+    milk_unit: Literal["kg", "lbs"] = Field(
+        default="kg",
+        description="Unit of milk yield",
     )
 
     @model_validator(mode="after")
@@ -279,10 +296,27 @@ class CharacteristicRequest(BaseModel):
         ge=1,
         description="Lactation number. Parities >= 3 are one group.",
     )
-    continent: Literal["USA", "EU", "CHEN"] = Field(
+    continent: Literal["USA", "EU"] = Field(
         default="USA",
-        description="Continent for priors: USA, EU, or CHEN.",
+        description="Continent for priors: USA or EU",
     )
+    custom_priors: MilkBotPriors | Literal["CHEN"] | None = Field(
+        default=None,
+        description=(
+            "Custom prior distributions for Bayesian"
+            " fitting. If a dict is provided, it must"
+            " be a dictionary of prior distributions"
+            " for each parameter in the model including"
+            " mean and std values. If the string 'CHEN'"
+            " is provided, the default Chen et al."
+            " priors are used."
+        ),
+    )
+    milk_unit: Literal["kg", "lbs"] = Field(
+        default="kg",
+        description="Unit of milk yield",
+    )
+
     persistency_method: Literal["derived", "literature"] = Field(
         default="derived",
         description=PERSISTENCY_DESC,
@@ -364,7 +398,7 @@ def predict(request: PredictRequest) -> dict[str, list[float]]:
         request.c,
         request.d,
     )
-    return {"predictions": predictions.tolist()}
+    return {"predictions": np.asarray(predictions).tolist()}
 
 
 @app.post("/fit")
@@ -385,6 +419,8 @@ def fit(request: FitRequest) -> dict[str, list[float]]:
         breed=request.breed,
         parity=request.parity,
         continent=request.continent,
+        custom_priors=request.custom_priors,
+        milk_unit=request.milk_unit,
     )
     return {"predictions": predictions.tolist()}
 
@@ -412,6 +448,8 @@ def characteristic(
         parity=request.parity,
         breed=request.breed,
         continent=request.continent,
+        custom_priors=request.custom_priors,
+        milk_unit=request.milk_unit,
         persistency_method=request.persistency_method,
         lactation_length=request.lactation_length,
     )

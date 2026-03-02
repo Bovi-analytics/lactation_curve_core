@@ -1,21 +1,25 @@
 name: Publish (lactationcurve)
 
 on:
-  push:
-    branches:
-      - master
+  workflow_run:
+    workflows: ["Version Bump"]
+    types:
+      - completed
 
 permissions:
   id-token: write
 
 jobs:
   publish:
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     environment: master
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: master
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
