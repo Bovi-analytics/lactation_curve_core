@@ -16,5 +16,11 @@ wheels/
 .pytest_cache/
 .ruff_cache/
 
+# Frontend
+.env.local
+node_modules
+.next
+*.tsbuildinfo
+
 #meike's test files
 tests/lactationcurve/test_dotenv.py

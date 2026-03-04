@@ -43,33 +43,33 @@ Authors:
     Lucia Trapanese, Judith Osei-Tete
 """
 
-import pytest
-import numpy as np
 import os
+
+import numpy as np
+import pytest
+from dotenv import find_dotenv, load_dotenv
 from lactationcurve.fitting import (
-    milkbot_model,
-    wood_model,
-    wilmink_model,
     ali_schaeffer_model,
-    fischer_model,
+    bayesian_fit_milkbot_single_lactation,
     brody_model,
-    sikka_model,
-    nelder_model,
+    build_prior,
     dhanoa_model,
-    emmans_model,
-    hayashi_model,
-    rook_model,
     dijkstra_model,
-    prasad_model,
+    emmans_model,
+    fischer_model,
+    fit_lactation_curve,
+    get_chen_priors,
     get_lc_parameters,
     get_lc_parameters_least_squares,
-    fit_lactation_curve,
-    bayesian_fit_milkbot_single_lactation,
-    get_chen_priors,
-    build_prior,
+    hayashi_model,
+    milkbot_model,
+    nelder_model,
+    prasad_model,
+    rook_model,
+    sikka_model,
+    wilmink_model,
+    wood_model,
 )
-
-from dotenv import find_dotenv, load_dotenv
 
 
 @pytest.fixture
@@ -112,15 +112,11 @@ class TestUtilityFunctions:
             assert key in prior, f"Missing key: {key} in prior"
             value = prior[key]
             assert isinstance(value, dict), f"Prior value for {key} should be a dict"
-            assert (
-                "mean" in value and "sd" in value
-            ), f"Prior {key} should have 'mean' and 'sd' keys"
-            assert isinstance(
-                value["mean"], (int, float)
-            ), f"Prior {key}['mean'] should be numeric"
-            assert isinstance(
-                value["sd"], (int, float)
-            ), f"Prior {key}['sd'] should be numeric"
+            assert "mean" in value and "sd" in value, (
+                f"Prior {key} should have 'mean' and 'sd' keys"
+            )
+            assert isinstance(value["mean"], (int, float)), f"Prior {key}['mean'] should be numeric"
+            assert isinstance(value["sd"], (int, float)), f"Prior {key}['sd'] should be numeric"
         # Optionally check for seMilk if present
         if "seMilk" in prior:
             assert isinstance(prior["seMilk"], (int, float)), "seMilk should be numeric"
@@ -144,8 +140,6 @@ def short_dim():
         np.ndarray: Days in milk from 1 to 9.
     """
     return np.arange(1, 10)
-
-
 
 
 @pytest.fixture
@@ -213,25 +207,22 @@ class TestModelFunctions:
         """Should produce output array with same shape as input DIM array."""
         t = np.array([1, 10, 100, 150, 200, 300])
         y = wood_model(t, 30, 0.2, 0.003)
-        assert (
-            y.shape == t.shape
-        ), f"Output shape {y.shape} should match input shape {t.shape}"
+        assert isinstance(y, np.ndarray)
+        assert y.shape == t.shape, f"Output shape {y.shape} should match input shape {t.shape}"
 
     def test_model_output_dtype_is_float(self):
         """Should produce output array with float dtype."""
         t = np.array([1, 10, 100, 150, 200, 300])
         y = wood_model(t, 30, 0.2, 0.003)
-        assert np.issubdtype(
-            y.dtype, np.floating
-        ), f"Output dtype should be float, got {y.dtype}"
+        assert isinstance(y, np.ndarray)
+        assert np.issubdtype(y.dtype, np.floating), f"Output dtype should be float, got {y.dtype}"
 
     def test_model_output_length_correct(self):
         """Should produce output array with correct length."""
         t = np.arange(1, 200)
         y = wood_model(t, 30, 0.2, 0.003)
-        assert len(y) == len(
-            t
-        ), f"Output length {len(y)} should match input length {len(t)}"
+        assert isinstance(y, np.ndarray)
+        assert len(y) == len(t), f"Output length {len(y)} should match input length {len(t)}"
         assert len(y) == 199, "Should have 199 values for DIM 1-199"
 
     def test_fitted_parameters_have_correct_length(self, sample_dim):
@@ -248,9 +239,7 @@ class TestModelFunctions:
         params_milkbot = get_lc_parameters(sample_dim, y_milkbot, model="milkbot")
         assert len(params_milkbot) == 4, "MilkBot model should return 4 parameters"
 
-    def test_fit_lactation_curve_output_length(
-        self, sample_lactation_data, milkbot_api_key
-    ):
+    def test_fit_lactation_curve_output_length(self, sample_lactation_data, milkbot_api_key):
         """Should produce curve values covering full lactation period."""
         dim, milkrecordings = sample_lactation_data
         y = fit_lactation_curve(
@@ -264,9 +253,7 @@ class TestModelFunctions:
             continent="USA",
         )
         # Should generate values for at least 305 days (standard lactation)
-        assert (
-            len(y) >= 305
-        ), f"Should generate at least 305 days of curve, got {len(y)}"
+        assert len(y) >= 305, f"Should generate at least 305 days of curve, got {len(y)}"
         assert y.dtype == np.float64, f"Output should be float64, got {y.dtype}"
 
 
@@ -353,21 +340,20 @@ class TestParameterFitting:
         est_params = get_lc_parameters_least_squares(sample_dim, y, model="milkbot")
 
         # Should recover parameters within tolerance
-        assert np.allclose(
-            est_params, true_params, rtol=0.5
-        ), f"Estimated {est_params} should be close to true {true_params}"
+        assert np.allclose(est_params, true_params, rtol=0.5), (
+            f"Estimated {est_params} should be close to true {true_params}"
+        )
 
     def test_milkbot_least_squares_handles_noisy_data(self, sample_dim):
         """Least squares should handle noisy data and produce finite parameters."""
         # Generate noisy synthetic data
         true_params = (40, 30, 10, 0.005)
         y_clean = milkbot_model(sample_dim, *true_params)
+        assert isinstance(y_clean, np.ndarray)
         y_noisy = y_clean + np.random.normal(0, 1.0, size=y_clean.shape)
 
         # Fit noisy data
-        est_params = get_lc_parameters_least_squares(
-            sample_dim, y_noisy, model="milkbot"
-        )
+        est_params = get_lc_parameters_least_squares(sample_dim, y_noisy, model="milkbot")
 
         # Should still produce finite parameters
         assert np.all(np.isfinite(est_params)), "Should handle noisy data"
@@ -404,14 +390,10 @@ class TestEdgeCases:
             ("milkbot", np.ndarray),
         ],
     )
-    def test_fit_lactation_curve_frequentist_models(
-        self, sample_dim, model_name, expected_type
-    ):
+    def test_fit_lactation_curve_frequentist_models(self, sample_dim, model_name, expected_type):
         """Should cover all frequentist model branches in fit_lactation_curve."""
         milkrecordings = np.random.uniform(20, 40, size=len(sample_dim))
-        y = fit_lactation_curve(
-            sample_dim, milkrecordings, model=model_name, fitting="frequentist"
-        )
+        y = fit_lactation_curve(sample_dim, milkrecordings, model=model_name, fitting="frequentist")
         assert isinstance(y, expected_type)
         assert len(y) >= len(sample_dim)
 
@@ -431,9 +413,7 @@ class TestEdgeCases:
         """Should cover branch where max(dim) > 305 in fit_lactation_curve (frequentist)."""
         dim = np.arange(1, 400)  # 399 days
         milkrecordings = np.random.uniform(20, 40, size=len(dim))
-        y = fit_lactation_curve(
-            dim, milkrecordings, model=model_name, fitting="frequentist"
-        )
+        y = fit_lactation_curve(dim, milkrecordings, model=model_name, fitting="frequentist")
         assert isinstance(y, expected_type)
         assert len(y) == 399, f"Output length should match max(dim), got {len(y)}"
 
@@ -458,9 +438,7 @@ class TestEdgeCases:
                     pass
 
                 def json(self):
-                    return {
-                        "fittedParams": {"scale": 1, "ramp": 2, "decay": 3, "offset": 4}
-                    }
+                    return {"fittedParams": {"scale": 1, "ramp": 2, "decay": 3, "offset": 4}}
 
             return MockResponse()
 
@@ -488,9 +466,7 @@ class TestEdgeCases:
                     pass
 
                 def json(self):
-                    return {
-                        "fittedParams": {"scale": 1, "ramp": 2, "decay": 3, "offset": 4}
-                    }
+                    return {"fittedParams": {"scale": 1, "ramp": 2, "decay": 3, "offset": 4}}
 
             return MockResponse()
 
@@ -505,15 +481,11 @@ class TestEdgeCases:
         assert isinstance(y, np.ndarray)
         assert len(y) == 399, f"Output length should match max(dim), got {len(y)}"
 
-    def test_fit_lactation_curve_bayesian_missing_key_raises(
-        self, sample_lactation_data
-    ):
+    def test_fit_lactation_curve_bayesian_missing_key_raises(self, sample_lactation_data):
         """Should raise Exception if key is missing for bayesian fitting."""
         dim, milkrecordings = sample_lactation_data
         with pytest.raises(Exception) as excinfo:
-            fit_lactation_curve(
-                dim, milkrecordings, model="milkbot", fitting="bayesian", key=None
-            )
+            fit_lactation_curve(dim, milkrecordings, model="milkbot", fitting="bayesian", key=None)
         assert "Key needed to use Bayesian fitting engine milkbot" in str(excinfo.value)
 
     def test_fit_lactation_curve_bayesian_non_milkbot_raises(
@@ -529,9 +501,8 @@ class TestEdgeCases:
                 fitting="bayesian",
                 key=milkbot_api_key,
             )
-        assert (
-            "Bayesian fitting is currently only implemented for milkbot models"
-            in str(excinfo.value)
+        assert "Bayesian fitting is currently only implemented for milkbot models" in str(
+            excinfo.value
         )
 
     def test_empty_input_raises_value_error(self):
@@ -563,6 +534,7 @@ class TestEdgeCases:
     def test_fitting_with_noise(self, sample_dim):
         """Should handle noisy data and produce finite parameters."""
         y = wood_model(sample_dim, 30, 0.2, 0.003)
+        assert isinstance(y, np.ndarray)
         y_noisy = y + np.random.normal(0, 0.5, size=y.shape)
         est_params = get_lc_parameters(sample_dim, y_noisy, model="MILKBOT")
         assert np.all(np.isfinite(est_params))
@@ -627,7 +599,9 @@ class TestEdgeCases:
         assert "Breed must be either Holstein = 'H' or Jersey 'J'" in str(excinfo.value)
 
     def test_invalid_continent_raises(self, short_dim, milkbot_api_key):
-        """Should raise exception for invalid continent in Bayesian fitting (only 'USA' and 'EU' allowed)."""
+        """Should raise exception for invalid continent in Bayesian
+        fitting (only 'USA' and 'EU' allowed).
+        """
         milkrecordings = np.random.uniform(20, 40, size=len(short_dim))
         with pytest.raises(Exception) as excinfo:
             fit_lactation_curve(
@@ -645,9 +619,7 @@ class TestEdgeCases:
         milk = np.random.uniform(20, 40, size=len(short_dim))
         with pytest.raises(Exception) as excinfo:
             fit_lactation_curve(short_dim, milk, model="wood", fitting="")
-        assert "Fitting method must be either frequentist or bayesian" in str(
-            excinfo.value
-        )
+        assert "Fitting method must be either frequentist or bayesian" in str(excinfo.value)
 
     def test_non_numeric_input_raises(self):
         """Should raise ValueError for non-numeric input."""
@@ -661,9 +633,8 @@ class TestEdgeCases:
         milk = np.random.uniform(20, 40, size=len(short_dim))
         with pytest.raises(Exception) as excinfo:
             fit_lactation_curve(short_dim, milk, model="wood", fitting="bayesian")
-        assert (
-            "Bayesian fitting is currently only implemented for milkbot models"
-            in str(excinfo.value)
+        assert "Bayesian fitting is currently only implemented for milkbot models" in str(
+            excinfo.value
         )
 
     @pytest.mark.parametrize(
@@ -718,6 +689,7 @@ class TestBayesianFitting:
         called = {}
 
         def mock_post(url, headers=None, json=None):
+            assert isinstance(json, dict)
             called["priors"] = json.get("priors", None)
 
             class MockResponse:
@@ -725,9 +697,7 @@ class TestBayesianFitting:
                     pass
 
                 def json(self):
-                    return {
-                        "fittedParams": {"scale": 1, "ramp": 2, "decay": 3, "offset": 4}
-                    }
+                    return {"fittedParams": {"scale": 1, "ramp": 2, "decay": 3, "offset": 4}}
 
             return MockResponse()
 
@@ -753,6 +723,7 @@ class TestBayesianFitting:
         called = {}
 
         def mock_post(url, headers=None, json=None):
+            assert isinstance(json, dict)
             called["priors"] = json.get("priors", None)
 
             class MockResponse:
@@ -760,9 +731,7 @@ class TestBayesianFitting:
                     pass
 
                 def json(self):
-                    return {
-                        "fittedParams": {"scale": 1, "ramp": 2, "decay": 3, "offset": 4}
-                    }
+                    return {"fittedParams": {"scale": 1, "ramp": 2, "decay": 3, "offset": 4}}
 
             return MockResponse()
 
@@ -775,9 +744,7 @@ class TestBayesianFitting:
             key=milkbot_api_key,
             custom_priors=custom,
         )
-        assert (
-            called["priors"] == custom
-        ), "Custom priors dict should be included in payload"
+        assert called["priors"] == custom, "Custom priors dict should be included in payload"
 
     def test_fit_lactation_curve_milkbot_produces_valid_output(
         self, sample_lactation_data, milkbot_api_key
@@ -802,9 +769,7 @@ class TestBayesianFitting:
         """Should return dict with required parameter keys."""
         dim = [1, 5, 10, 20, 50]
         milkrecordings = [10, 12, 15, 18, 22]
-        res = bayesian_fit_milkbot_single_lactation(
-            dim, milkrecordings, milkbot_api_key
-        )
+        res = bayesian_fit_milkbot_single_lactation(dim, milkrecordings, milkbot_api_key)
         assert isinstance(res, dict)
         for key in ["scale", "ramp", "decay", "offset", "nPoints"]:
             assert key in res
@@ -814,9 +779,7 @@ class TestBayesianFitting:
         """Should handle unordered DIM input for Bayesian fitting."""
         dim = [50, 1, 20, 5, 10]
         milkrecordings = [22, 10, 18, 12, 15]
-        res = bayesian_fit_milkbot_single_lactation(
-            dim, milkrecordings, milkbot_api_key
-        )
+        res = bayesian_fit_milkbot_single_lactation(dim, milkrecordings, milkbot_api_key)
         for key in ["scale", "ramp", "decay", "offset"]:
             assert isinstance(res[key], (float, int))
 
@@ -824,9 +787,7 @@ class TestBayesianFitting:
         """Should work with minimal number of data points."""
         dim = [1, 5, 13, 67]
         milkrecordings = [10, 12, 15, 30]
-        res = bayesian_fit_milkbot_single_lactation(
-            dim, milkrecordings, milkbot_api_key
-        )
+        res = bayesian_fit_milkbot_single_lactation(dim, milkrecordings, milkbot_api_key)
         assert isinstance(res["scale"], float)
 
     def test_bayesian_invalid_key_raises(self):
@@ -912,9 +873,9 @@ class TestBayesianFitting:
         assert len(priors) > 0
         # Verify priors contain expected parameter keys
         expected_keys = {"scale", "ramp", "decay", "offset"}
-        assert any(
-            key in priors for key in expected_keys
-        ), f"Priors should contain at least one of {expected_keys}"
+        assert any(key in priors for key in expected_keys), (
+            f"Priors should contain at least one of {expected_keys}"
+        )
 
     def test_get_chen_priors_detailed_structure(self):
         """Should return priors with correct structure and value types."""
@@ -931,29 +892,25 @@ class TestBayesianFitting:
         for param in main_params:
             if param in priors:
                 value = priors[param]
-                assert isinstance(
-                    value, dict
-                ), f"Prior value for {param} should be a dict, got {type(value)}"
+                assert isinstance(value, dict), (
+                    f"Prior value for {param} should be a dict, got {type(value)}"
+                )
                 assert "mean" in value, f"Prior {param} should have 'mean' key"
                 assert "sd" in value, f"Prior {param} should have 'sd' key"
-                assert isinstance(
-                    value["mean"], (int, float, np.number)
-                ), f"Prior {param}['mean'] should be numeric, got {type(value['mean'])}"
-                assert isinstance(
-                    value["sd"], (int, float, np.number)
-                ), f"Prior {param}['sd'] should be numeric, got {type(value['sd'])}"
-                assert np.isfinite(
-                    value["mean"]
-                ), f"Prior {param}['mean'] should be finite"
+                assert isinstance(value["mean"], (int, float, np.number)), (
+                    f"Prior {param}['mean'] should be numeric, got {type(value['mean'])}"
+                )
+                assert isinstance(value["sd"], (int, float, np.number)), (
+                    f"Prior {param}['sd'] should be numeric, got {type(value['sd'])}"
+                )
+                assert np.isfinite(value["mean"]), f"Prior {param}['mean'] should be finite"
                 assert np.isfinite(value["sd"]), f"Prior {param}['sd'] should be finite"
 
         # Other keys may be flat numeric values
         for key, value in priors.items():
             if key not in main_params:
                 if isinstance(value, (int, float, np.number)):
-                    assert np.isfinite(
-                        value
-                    ), f"Prior {key} should be finite, got {value}"
+                    assert np.isfinite(value), f"Prior {key} should be finite, got {value}"
 
     def test_get_chen_priors_parameter_ranges(self):
         """Should return priors with reasonable parameter ranges."""
@@ -965,27 +922,19 @@ class TestBayesianFitting:
             if key in priors and isinstance(priors[key], dict):
                 value = priors[key]
                 # Check mean values
-                assert not np.isnan(
-                    value["mean"]
-                ), f"Prior {key}['mean'] should not be NaN"
-                assert not np.isinf(
-                    value["mean"]
-                ), f"Prior {key}['mean'] should not be infinite"
-                assert (
-                    abs(value["mean"]) < 1e6
-                ), f"Prior {key}['mean']={value['mean']} seems unreasonably large"
+                assert not np.isnan(value["mean"]), f"Prior {key}['mean'] should not be NaN"
+                assert not np.isinf(value["mean"]), f"Prior {key}['mean'] should not be infinite"
+                assert abs(value["mean"]) < 1e6, (
+                    f"Prior {key}['mean']={value['mean']} seems unreasonably large"
+                )
 
                 # Check sd (standard deviation) values
                 assert not np.isnan(value["sd"]), f"Prior {key}['sd'] should not be NaN"
-                assert not np.isinf(
-                    value["sd"]
-                ), f"Prior {key}['sd'] should not be infinite"
-                assert (
-                    value["sd"] > 0
-                ), f"Prior {key}['sd'] should be positive, got {value['sd']}"
-                assert (
-                    value["sd"] < 1e6
-                ), f"Prior {key}['sd']={value['sd']} seems unreasonably large"
+                assert not np.isinf(value["sd"]), f"Prior {key}['sd'] should not be infinite"
+                assert value["sd"] > 0, f"Prior {key}['sd'] should be positive, got {value['sd']}"
+                assert value["sd"] < 1e6, (
+                    f"Prior {key}['sd']={value['sd']} seems unreasonably large"
+                )
 
         # Check other numeric values (like seMilk)
         for key, value in priors.items():
@@ -1002,29 +951,20 @@ class TestBayesianFitting:
         priors_parity3 = get_chen_priors(3)
 
         # All should have the same keys
-        assert set(priors_parity1.keys()) == set(
-            priors_parity2.keys()
-        ), "Priors for different parities should have same keys"
-        assert set(priors_parity2.keys()) == set(
-            priors_parity3.keys()
-        ), "Priors for different parities should have same keys"
+        assert set(priors_parity1.keys()) == set(priors_parity2.keys()), (
+            "Priors for different parities should have same keys"
+        )
+        assert set(priors_parity2.keys()) == set(priors_parity3.keys()), (
+            "Priors for different parities should have same keys"
+        )
 
         # Main parameters should have consistent structure (mean and sd)
         main_params = ["scale", "ramp", "decay", "offset"]
         for key in main_params:
             if key in priors_parity1:
-                assert (
-                    isinstance(priors_parity1[key], dict)
-                    and "mean" in priors_parity1[key]
-                )
-                assert (
-                    isinstance(priors_parity2[key], dict)
-                    and "mean" in priors_parity2[key]
-                )
-                assert (
-                    isinstance(priors_parity3[key], dict)
-                    and "mean" in priors_parity3[key]
-                )
+                assert isinstance(priors_parity1[key], dict) and "mean" in priors_parity1[key]
+                assert isinstance(priors_parity2[key], dict) and "mean" in priors_parity2[key]
+                assert isinstance(priors_parity3[key], dict) and "mean" in priors_parity3[key]
 
         # At least some mean values should differ between parities
         # (lactation curves differ by parity)

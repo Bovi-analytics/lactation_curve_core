@@ -16,14 +16,25 @@ def test_test_interval_single_lactation(api: httpx.Client, sample_data: dict):
 
 
 def test_test_interval_multiple_lactations(api: httpx.Client):
-    r = api.post("/test-interval", json={
-        "dim": [10, 30, 60, 90, 120, 10, 30, 60, 90, 120],
-        "milkrecordings": [
-            15.0, 25.0, 30.0, 28.0, 26.0,
-            20.0, 30.0, 35.0, 32.0, 28.0,
-        ],
-        "test_ids": [1, 1, 1, 1, 1, 2, 2, 2, 2, 2],
-    })
+    r = api.post(
+        "/test-interval",
+        json={
+            "dim": [10, 30, 60, 90, 120, 10, 30, 60, 90, 120],
+            "milkrecordings": [
+                15.0,
+                25.0,
+                30.0,
+                28.0,
+                26.0,
+                20.0,
+                30.0,
+                35.0,
+                32.0,
+                28.0,
+            ],
+            "test_ids": [1, 1, 1, 1, 1, 2, 2, 2, 2, 2],
+        },
+    )
     assert r.status_code == 200
     data = r.json()
     assert len(data["results"]) == 2
@@ -41,17 +52,23 @@ def test_test_interval_defaults(api: httpx.Client, sample_data: dict):
 
 def test_test_interval_missing_dim(api: httpx.Client):
     """Missing required field dim should return 422."""
-    r = api.post("/test-interval", json={
-        "milkrecordings": [15.0, 25.0, 30.0],
-    })
+    r = api.post(
+        "/test-interval",
+        json={
+            "milkrecordings": [15.0, 25.0, 30.0],
+        },
+    )
     assert r.status_code == 422
 
 
 def test_test_interval_missing_milkrecordings(api: httpx.Client):
     """Missing required field milkrecordings should return 422."""
-    r = api.post("/test-interval", json={
-        "dim": [10, 30, 60],
-    })
+    r = api.post(
+        "/test-interval",
+        json={
+            "dim": [10, 30, 60],
+        },
+    )
     assert r.status_code == 422
 
 
@@ -61,35 +78,47 @@ def test_test_interval_empty_body(api: httpx.Client):
     assert r.status_code == 422
 
 
-@pytest.mark.parametrize("bad_dim", [
-    "not a list",
-    [1, "two", 3],
-])
+@pytest.mark.parametrize(
+    "bad_dim",
+    [
+        "not a list",
+        [1, "two", 3],
+    ],
+)
 def test_test_interval_invalid_dim_type(api: httpx.Client, bad_dim):
     """Invalid dim types should return 422."""
-    r = api.post("/test-interval", json={
-        "dim": bad_dim,
-        "milkrecordings": [15.0, 25.0, 30.0],
-    })
+    r = api.post(
+        "/test-interval",
+        json={
+            "dim": bad_dim,
+            "milkrecordings": [15.0, 25.0, 30.0],
+        },
+    )
     assert r.status_code == 422
 
 
 def test_test_interval_mismatched_lengths(api: httpx.Client):
     """dim and milkrecordings with different lengths should return 422."""
-    r = api.post("/test-interval", json={
-        "dim": [10, 30, 60, 90],
-        "milkrecordings": [15.0, 25.0],
-    })
+    r = api.post(
+        "/test-interval",
+        json={
+            "dim": [10, 30, 60, 90],
+            "milkrecordings": [15.0, 25.0],
+        },
+    )
     assert r.status_code == 422
 
 
 def test_test_interval_mismatched_test_ids(api: httpx.Client):
     """test_ids with different length than dim should return 422."""
-    r = api.post("/test-interval", json={
-        "dim": [10, 30, 60],
-        "milkrecordings": [15.0, 25.0, 30.0],
-        "test_ids": [1, 1],
-    })
+    r = api.post(
+        "/test-interval",
+        json={
+            "dim": [10, 30, 60],
+            "milkrecordings": [15.0, 25.0, 30.0],
+            "test_ids": [1, 1],
+        },
+    )
     assert r.status_code == 422
 
 
@@ -101,10 +130,13 @@ def test_test_interval_empty_lists(api: httpx.Client):
 
 def test_test_interval_single_point(api: httpx.Client):
     """Single data point is too few — should return 422."""
-    r = api.post("/test-interval", json={
-        "dim": [10],
-        "milkrecordings": [15.0],
-    })
+    r = api.post(
+        "/test-interval",
+        json={
+            "dim": [10],
+            "milkrecordings": [15.0],
+        },
+    )
     assert r.status_code == 422
 
 

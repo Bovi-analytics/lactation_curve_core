@@ -12,7 +12,6 @@ or ADMIN if you want to require an API key in the URL (?code=<key>).
 """
 
 import azure.functions as func
-
 from main import app as fastapi_app
 
 # The variable MUST be named `app` - Azure Functions host looks for this by default

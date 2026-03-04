@@ -87,7 +87,7 @@ The package is organized into three main modules:
 * The key can be requested by sending an email to Jim Ehrlich [jehrlich@MilkBot.com](mailto:jehrlich@MilkBot.com).
 * More information about the API can be found [here](https://api.milkbot.com/).
 
-# Citation 
+# Citation
 
 **Citing the lactationcurve package**
 
@@ -102,9 +102,7 @@ BibTex:
 
 @software{van_leerdam_2026_lactation_curve_core,
 
-  author       = {van Leerdam, Meike Beatrijs and de Kok, D. and
-
-    Osei-Tete, J. A. and Hostens, M.},
+  author       = {van Leerdam, Meike Beatrijs and de Kok, D. and Osei-Tete, J. A. and Hostens, M.},
 
   title        = {Bovi-analytics/lactation\_curve\_core: v.0.1.0},
 

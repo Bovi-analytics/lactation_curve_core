@@ -1,8 +1,7 @@
 import numpy as np
 from fastapi import FastAPI
+from lactationcurve.fitting import milkbot_model
 from pydantic import BaseModel, Field
-
-from lactationcurve import milkbot_model
 
 app = FastAPI(title="MilkBot API")
 
@@ -24,4 +23,4 @@ def health() -> dict[str, str]:
 def predict(request: PredictRequest) -> dict[str, list[float]]:
     t = np.array(request.t)
     predictions = milkbot_model(t, request.a, request.b, request.c, request.d)
-    return {"predictions": predictions.tolist()}
+    return {"predictions": np.asarray(predictions).tolist()}

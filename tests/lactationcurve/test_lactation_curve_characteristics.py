@@ -31,14 +31,14 @@ Authors:
     Meike van Leerdam, Judith Osei-Tete
 """
 
-import pytest
-import pandas as pd
-import sympy as sp
-from pathlib import Path
 import math
-import os 
-from dotenv import find_dotenv, load_dotenv
+import os
+from pathlib import Path
 
+import pandas as pd
+import pytest
+import sympy as sp
+from dotenv import find_dotenv, load_dotenv
 from lactationcurve.characteristics import (
     calculate_characteristic,
     lactation_curve_characteristic_function,
@@ -60,6 +60,7 @@ def key() -> str:
         raise ValueError("milkbot_key not found in environment. Check your .env file.")
     return key
 
+
 @pytest.fixture
 def test_df():
     data_path = Path(__file__).parent / "test_data" / "l2_anim2_herd654.csv"
@@ -72,9 +73,12 @@ def test_df():
 @pytest.mark.characteristic
 class TestCharacteristicFunction:
     """
-    This test class verifies symbolic and functional characteristic extraction for lactation curve models.
+    Verify symbolic and functional characteristic extraction.
 
-    It checks symbolic expressions, parameter extraction, and callable generation for a variety of supported models.
+    This test class verifies symbolic and functional characteristic
+    extraction for lactation curve models. It checks symbolic
+    expressions, parameter extraction, and callable generation
+    for a variety of supported models.
 
     Attributes:
         Tests cover: Wood, Brody, Sikka, Wilmink, Ali-Schaeffer.
@@ -86,7 +90,9 @@ class TestCharacteristicFunction:
             lactation_curve_characteristic_function(model="not_a_model")
 
     def test_wood_time_to_peak_returns_expr_params_and_func(self):
-        """Test for correct symbolic expression, parameter symbols, and callable for Wood time to peak."""
+        """Test for correct symbolic expression, parameter symbols,
+        and callable for Wood time to peak.
+        """
         expr, params, func = lactation_curve_characteristic_function(
             model="wood", characteristic="time_to_peak"
         )
@@ -96,7 +102,9 @@ class TestCharacteristicFunction:
         assert callable(func)
 
     def test_wood_peak_yield_returns_expr_params_and_func(self):
-        """Test for correct symbolic expression, parameter symbols, and callable for Wood peak yield."""
+        """Test for correct symbolic expression, parameter symbols,
+        and callable for Wood peak yield.
+        """
         expr, params, func = lactation_curve_characteristic_function(
             model="wood", characteristic="peak_yield"
         )
@@ -105,7 +113,9 @@ class TestCharacteristicFunction:
         assert callable(func)
 
     def test_wood_cumulative_returns_expr_params_and_func(self):
-        """Test for correct symbolic expression, parameter symbols, and callable for Wood cumulative yield."""
+        """Test for correct symbolic expression, parameter symbols,
+        and callable for Wood cumulative yield.
+        """
         expr, params, func = lactation_curve_characteristic_function(
             model="wood", characteristic="cumulative_milk_yield"
         )
@@ -114,7 +124,9 @@ class TestCharacteristicFunction:
         assert callable(func)
 
     def test_default_returns_dict_with_all_four(self):
-        """Test that the default call returns a dictionary with all four characteristics for the Wood model."""
+        """Test that the default call returns a dict with all four
+        characteristics for the Wood model.
+        """
         result, params, func = lactation_curve_characteristic_function(model="wood")
         assert isinstance(result, dict)
         assert set(result.keys()) == {
@@ -129,7 +141,9 @@ class TestCharacteristicFunction:
         assert callable(list(func.values())[0])
 
     def test_brody_cumulative_returns_expr_params_and_func(self):
-        """Test for correct symbolic expression, parameter symbols, and callable for Brody cumulative yield."""
+        """Test for correct symbolic expression, parameter symbols,
+        and callable for Brody cumulative yield.
+        """
         expr, params, func = lactation_curve_characteristic_function(
             "brody", characteristic="cumulative_milk_yield"
         )
@@ -157,16 +171,19 @@ class TestCharacteristicFunction:
 @pytest.mark.persistency
 class TestPersistencyFunctions:
     """
-    This test class validates persistency calculations for Wood and MilkBot models.
+    Validate persistency calculations for Wood and MilkBot models.
 
-    It ensures correct computation, return types, and error handling for persistency-related functions.
+    It ensures correct computation, return types, and error
+    handling for persistency-related functions.
 
     Attributes:
-        Tests cover: persistency_wood, persistency_milkbot, error handling for zero decay.
+        Tests cover: persistency_wood, persistency_milkbot,
+        error handling for zero decay.
     """
 
     def test_persistency_wood_basic(self):
-        """Test for correct persistency calculation for the Wood model with known input and output."""
+        """Test for correct persistency calculation for the Wood model
+        with known input and output."""
         result = persistency_wood(2, 0.5)
         expected = -(2 + 1) * math.log(0.5)  # = -3 * ln(0.5)
         assert pytest.approx(result, rel=1e-9) == expected
@@ -177,7 +194,9 @@ class TestPersistencyFunctions:
         assert isinstance(result, float)
 
     def test_persistency_milkbot_basic(self):
-        """Test for correct persistency calculation for the MilkBot model with known input and output."""
+        """Test for correct persistency calculation for the MilkBot
+        model with known input and output.
+        """
         result = persistency_milkbot(2)
         expected = 0.693 / 2
         assert pytest.approx(result, rel=1e-9) == expected
@@ -196,20 +215,20 @@ class TestPersistencyFunctions:
 @pytest.mark.frequentist
 class TestCalculateCharacteristicFrequentist:
     """
-    This test class checks frequentist characteristic extraction from real lactation data.
+    Check frequentist characteristic extraction from real data.
 
-    It includes tests for time to peak, peak yield, cumulative yield, and persistency calculations using the Wood model.
+    It includes tests for time to peak, peak yield, cumulative
+    yield, and persistency calculations using the Wood model.
 
     Attributes:
-        Tests cover: calculate_characteristic (Wood, frequentist), all characteristic types, custom lactation length.
+        Tests cover: calculate_characteristic (Wood, frequentist),
+        all characteristic types, custom lactation length.
     """
 
     def test_time_to_peak_frequentist_wood(self, test_df):
         """Test for correct time to peak calculation for the Wood model (frequentist)."""
         dim, my = test_df
-        result = calculate_characteristic(
-            dim, my, model="wood", characteristic="time_to_peak"
-        )
+        result = calculate_characteristic(dim, my, model="wood", characteristic="time_to_peak")
         expected = 45
         assert isinstance(result, float)
         assert 0 < result < 305
@@ -218,9 +237,7 @@ class TestCalculateCharacteristicFrequentist:
     def test_peak_yield_frequentist_wood(self, test_df):
         """Test for correct peak yield calculation for the Wood model (frequentist)."""
         dim, my = test_df
-        result = calculate_characteristic(
-            dim, my, model="wood", characteristic="peak_yield"
-        )
+        result = calculate_characteristic(dim, my, model="wood", characteristic="peak_yield")
         expected = 46.40100132439492
         assert isinstance(result, float)
         assert result > 0
@@ -238,7 +255,9 @@ class TestCalculateCharacteristicFrequentist:
         assert pytest.approx(result, abs=2) == expected
 
     def test_cumulative_frequentist_wood_with_lactation_length(self, test_df):
-        """Test for cumulative yield calculation for the Wood model with a custom lactation length."""
+        """Test for cumulative yield calculation for the Wood model
+        with a custom lactation length.
+        """
         dim, my = test_df
         result = calculate_characteristic(
             dim,
@@ -275,7 +294,9 @@ class TestCalculateCharacteristicFrequentist:
         assert isinstance(result, float)
 
     def test_persistency_derived_with_lactation_length(self, test_df):
-        """Test for persistency calculation for the Wood model (frequentist, derived, custom lactation length)."""
+        """Test for persistency calculation for the Wood model
+        (frequentist, derived, custom lactation length).
+        """
         dim, my = test_df
         result = calculate_characteristic(
             dim,
@@ -291,12 +312,15 @@ class TestCalculateCharacteristicFrequentist:
 @pytest.mark.bayesian
 class TestCalculateCharacteristicBayesian:
     """
-    This test class validates Bayesian characteristic extraction using the MilkBot model.
+    Validate Bayesian characteristic extraction using MilkBot.
 
-    It covers Bayesian fitting and characteristic calculations, including API integration and both literature and derived persistency methods.
+    It covers Bayesian fitting and characteristic calculations,
+    including API integration and both literature and derived
+    persistency methods.
 
     Attributes:
-        Tests cover: calculate_characteristic (MilkBot, Bayesian), all characteristic types, API key usage.
+        Tests cover: calculate_characteristic (MilkBot, Bayesian),
+        all characteristic types, API key usage.
     """
 
     def test_time_to_peak_bayesian_milkbot(self, test_df, key):
@@ -379,12 +403,16 @@ class TestCalculateCharacteristicBayesian:
 @pytest.mark.errorhandling
 class TestCalculateCharacteristicErrors:
     """
-    This test class ensures robust error handling and validation in characteristic extraction functions.
+    Ensure robust error handling and validation.
 
-    It checks that proper exceptions are raised for invalid input, missing keys, and unsupported models or characteristics.
+    It checks that proper exceptions are raised for invalid
+    input, missing keys, and unsupported models or
+    characteristics.
 
     Attributes:
-        Tests cover: invalid model names, invalid characteristics, missing API keys, unsupported Bayesian models.
+        Tests cover: invalid model names, invalid
+        characteristics, missing API keys, unsupported
+        Bayesian models.
     """
 
     def test_invalid_characteristic_raises(self, test_df):
@@ -397,9 +425,7 @@ class TestCalculateCharacteristicErrors:
         """Test that an Exception is raised for an unsupported model in calculate_characteristic."""
         dim, my = test_df
         with pytest.raises(Exception, match="only works for"):
-            calculate_characteristic(
-                dim, my, model="brody", characteristic="cumulative_milk_yield"
-            )
+            calculate_characteristic(dim, my, model="brody", characteristic="cumulative_milk_yield")
 
     def test_bayesian_requires_key(self, test_df):
         """Test that an Exception is raised if key is missing for Bayesian fitting."""
@@ -414,7 +440,9 @@ class TestCalculateCharacteristicErrors:
             )
 
     def test_bayesian_non_milkbot_raises(self, test_df, key):
-        """Test that an Exception is raised if Bayesian fitting is requested for a non-MilkBot model."""
+        """Test that an Exception is raised if Bayesian fitting is
+        requested for a non-MilkBot model.
+        """
         dim, my = test_df
         with pytest.raises(
             Exception,
@@ -433,12 +461,14 @@ class TestCalculateCharacteristicErrors:
 @pytest.mark.numeric
 class TestNumericHelpers:
     """
-    This test class covers numeric characteristic calculations for lactation curve models.
+    Cover numeric characteristic calculations for models.
 
-    It includes numeric time to peak, peak yield, and cumulative yield calculations for the Wood model.
+    It includes numeric time to peak, peak yield, and cumulative
+    yield calculations for the Wood model.
 
     Attributes:
-        Tests cover: numeric_time_to_peak, numeric_peak_yield, numeric_cumulative_yield, custom lactation length.
+        Tests cover: numeric_time_to_peak, numeric_peak_yield,
+        numeric_cumulative_yield, custom lactation length.
     """
 
     def test_numeric_time_to_peak(self, test_df):
@@ -463,7 +493,9 @@ class TestNumericHelpers:
         assert result > 0
 
     def test_numeric_cumulative_yield_with_lactation_length(self, test_df):
-        """Test for numeric cumulative yield calculation for the Wood model with a custom lactation length."""
+        """Test for numeric cumulative yield calculation for the
+        Wood model with a custom lactation length.
+        """
         dim, my = test_df
         result = numeric_cumulative_yield(dim, my, model="wood", lactation_length=200)
         assert isinstance(result, (float, int))

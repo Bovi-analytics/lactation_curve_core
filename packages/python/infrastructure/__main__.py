@@ -14,6 +14,8 @@ Deployment approach:
   App uses Azure Files mounting for its content storage.
 """
 
+import hashlib
+
 import pulumi
 from pulumi_azure_native import (
     applicationinsights,
@@ -29,6 +31,8 @@ from pulumi_azure_native import (
 config = pulumi.Config()
 stack = pulumi.get_stack()
 
+location = config.require("location")
+
 # Naming prefix based on stack (e.g., "milkbot-dev")
 prefix = f"milkbot-{stack}"
 
@@ -41,12 +45,20 @@ tags = {
 }
 
 # ---------------------------------------------------------------------------
-# Resource Group
+# Resource Group (existing - looked up from Pulumi config)
 # ---------------------------------------------------------------------------
-resource_group = resources.ResourceGroup(
+subscription_id = config.require("subscriptionId")
+suffix = hashlib.md5(subscription_id.encode()).hexdigest()[:6]
+resource_group_name = config.require("resourceGroup")
+
+resource_group = resources.ResourceGroup.get(
     "resource-group",
-    resource_group_name=f"rg-{prefix}",
-    tags=tags,
+    id=pulumi.Output.concat(
+        "/subscriptions/",
+        subscription_id,
+        "/resourceGroups/",
+        resource_group_name,
+    ),
 )
 
 # ---------------------------------------------------------------------------
@@ -56,7 +68,9 @@ resource_group = resources.ResourceGroup(
 storage_account = storage.StorageAccount(
     "storage-account",
     resource_group_name=resource_group.name,
-    account_name=f"{prefix.replace('-', '')}sa",  # 3-24 chars, no hyphens
+    location=location,
+    # Storage account names must be globally unique, 3-24 chars, lowercase alphanumeric
+    account_name=f"{prefix.replace('-', '')}{suffix}",
     sku=storage.SkuArgs(name=storage.SkuName.STANDARD_LRS),
     kind=storage.Kind.STORAGE_V2,
     access_tier=storage.AccessTier.HOT,
@@ -75,9 +89,7 @@ storage_keys = pulumi.Output.all(resource_group.name, storage_account.name).appl
 )
 primary_storage_key = storage_keys.keys[0].value
 
-storage_connection_string = pulumi.Output.all(
-    storage_account.name, primary_storage_key
-).apply(
+storage_connection_string = pulumi.Output.all(storage_account.name, primary_storage_key).apply(
     lambda args: (
         f"DefaultEndpointsProtocol=https;"
         f"AccountName={args[0]};"
@@ -93,6 +105,7 @@ storage_connection_string = pulumi.Output.all(
 log_analytics = operationalinsights.Workspace(
     "log-analytics",
     resource_group_name=resource_group.name,
+    location=location,
     workspace_name=f"{prefix}-logs",
     sku=operationalinsights.WorkspaceSkuArgs(name="PerGB2018"),
     retention_in_days=31,
@@ -105,6 +118,7 @@ log_analytics = operationalinsights.Workspace(
 app_insights = applicationinsights.Component(
     "app-insights",
     resource_group_name=resource_group.name,
+    location=location,
     resource_name_=f"{prefix}-insights",
     kind="web",
     application_type=applicationinsights.ApplicationType.WEB,
@@ -121,6 +135,7 @@ app_insights = applicationinsights.Component(
 app_service_plan = web.AppServicePlan(
     "consumption-plan",
     resource_group_name=resource_group.name,
+    location=location,
     name=f"{prefix}-plan",
     sku=web.SkuDescriptionArgs(
         name="Y1",
@@ -139,7 +154,8 @@ milkbot_key = config.get_secret("milkbotKey") or ""
 function_app = web.WebApp(
     "function-app",
     resource_group_name=resource_group.name,
-    name=f"{prefix}-func",
+    location=location,
+    name=f"{prefix}-{suffix}-func",
     kind="functionapp,linux",
     reserved=True,
     server_farm_id=app_service_plan.id,

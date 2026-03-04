@@ -40,15 +40,17 @@ Requires
 
 Public functions
 ----------------
-- fit_lactation_curve
+- fit_lactation_curve(dim, milkrecordings, model="wood",
+  fitting="frequentist", breed="H", parity=3,
+  continent="USA", key=None)
   Fit a lactation curve to the provided data and return predicted milk yield
   for each day in milk (DIM) in the range 1–305 (or up to the maximum DIM if it exceeds 305).
 
-- get_lc_parameters
+- get_lc_parameters(dim, milkrecordings, model="wood")
   Fit a lactation curve to the provided data and return model parameters using
   frequentist statistics: minimize/curve_fit.
 
-- get_lc_parameters_least_squares
+- get_lc_parameters_least_squares(dim, milkrecordings, model="milkbot")
   Fit a lactation curve to the provided data and return model parameters using
   least-squares estimation (frequentist).
 
@@ -57,22 +59,26 @@ Notes
 - Units: DIM in days, milk in kg or lb.
 - Input validation and normalization are delegated to
   `lactationcurve.preprocessing.validate_and_prepare_inputs`.
-- Bayesian fitting for the MilkBot model is performed via the MilkBot API, 
-    this requires an API key and accepts additional parameters for breed, parity, continent, and custom priors.
-- For information on the fitting API see https://api.milkbot.com/ 
-    or contact Jim Ehrlich, DVM: jehrlich@MilkBot.com
+- Bayesian fitting for the MilkBot model is performed via the MilkBot API,
+  this requires an API key and accepts additional parameters for breed,
+  parity, continent, and custom priors.
+- For information on the fitting API see https://api.milkbot.com/
+  or contact Jim Ehrlich, DVM: jehrlich@MilkBot.com
 """
 
 # packages
+from __future__ import annotations
+
 import numpy as np
 import requests
 from scipy.optimize import curve_fit, least_squares, minimize
 
 from lactationcurve.preprocessing import validate_and_prepare_inputs
+from lactationcurve.preprocessing.validate_and_standardize import MilkBotPriors
 
 
 # --- Models ---
-def milkbot_model(t, a, b, c, d) -> float:
+def milkbot_model(t, a, b, c, d) -> np.floating | np.ndarray:
     """MilkBot lactation curve model.
 
     Args:
@@ -91,7 +97,7 @@ def milkbot_model(t, a, b, c, d) -> float:
     return a * (1 - np.exp((c - t) / b) / 2) * np.exp(-d * t)
 
 
-def wood_model(t, a, b, c) -> float:
+def wood_model(t, a, b, c) -> np.floating | np.ndarray:
     """Wood lactation curve model.
 
     Args:
@@ -109,7 +115,7 @@ def wood_model(t, a, b, c) -> float:
     return a * (t**b) * np.exp(-c * t)
 
 
-def wilmink_model(t, a, b, c, k=-0.05) -> float:
+def wilmink_model(t, a, b, c, k=-0.05) -> np.floating | np.ndarray:
     """Wilmink lactation curve model.
 
     Args:
@@ -129,7 +135,7 @@ def wilmink_model(t, a, b, c, k=-0.05) -> float:
     return a + b * t + c * np.exp(k * t)
 
 
-def ali_schaeffer_model(t, a, b, c, d, k) -> float:
+def ali_schaeffer_model(t, a, b, c, d, k) -> np.floating | np.ndarray:
     """Ali & Schaeffer lactation curve model.
 
     Args:
@@ -151,7 +157,7 @@ def ali_schaeffer_model(t, a, b, c, d, k) -> float:
     return a + b * t_scaled + c * (t_scaled**2) + d * log_term + k * (log_term**2)
 
 
-def fischer_model(t, a, b, c) -> float:
+def fischer_model(t, a, b, c) -> np.floating | np.ndarray:
     """Fischer lactation curve model.
 
     Args:
@@ -401,14 +407,17 @@ def fit_lactation_curve(
             Only used for Bayesian.
         continent (Str): priors chosen by MilkBot API based on continent averages.
             Only used for Bayesian, options: "USA" (default) and "EU".
-        custom_priors (Dict | str | None): Custom prior distributions for Bayesian fitting.
-            If a dict is provided, it must be a dictionary of prior distributions for each parameter in the model. 
+        custom_priors (Dict | str | None): Custom prior
+            distributions for Bayesian fitting.
+            If a dict is provided, it must be a dictionary
+            of prior distributions for each parameter
+            in the model.
             Set the correct dictionary using the `build_prior` helper function.
             If the string "CHEN" is provided, the default Chen et al. priors are used.
             Only used for Bayesian.
         key = Str: API key for MilkBot API (required for Bayesian fitting).
             Only used for Bayesian.
-        milk_unit (Str): Unit of milk yield measurements. Must be either "kg" or "lbs". 
+        milk_unit (Str): Unit of milk yield measurements. Must be either "kg" or "lbs".
             Default is "kg".
             Only used for Bayesian.
 
@@ -449,64 +458,84 @@ def fit_lactation_curve(
 
     if fitting == "frequentist":
         if model == "wood":
-            a_w, b_w, c_w = get_lc_parameters(dim, milkrecordings, model)
+            params = get_lc_parameters(dim, milkrecordings, model)
+            assert params is not None, "Failed to fit Wood model parameters"
+            a_w, b_w, c_w = params[0], params[1], params[2]
             if max(dim) > 305:
                 t_range = np.arange(1, (max(dim) + 1))
                 y_w = wood_model(t_range, a_w, b_w, c_w)
             else:
                 t_range = np.arange(1, 306)
                 y_w = wood_model(t_range, a_w, b_w, c_w)
-            return y_w
+            return np.asarray(y_w)
 
         elif model == "wilmink":
-            a_wil, b_wil, c_wil, k_wil = get_lc_parameters(dim, milkrecordings, model)
+            params = get_lc_parameters(dim, milkrecordings, model)
+            assert params is not None, "Failed to fit Wilmink model parameters"
+            a_wil, b_wil, c_wil, k_wil = (params[0], params[1], params[2], params[3])
             if max(dim) > 305:
                 t_range = np.arange(1, (max(dim) + 1))
                 y_wil = wilmink_model(t_range, a_wil, b_wil, c_wil, k_wil)
             else:
                 t_range = np.arange(1, 306)
                 y_wil = wilmink_model(t_range, a_wil, b_wil, c_wil, k_wil)
-            return y_wil
+            return np.asarray(y_wil)
 
         elif model == "ali_schaeffer":
-            a_as, b_as, c_as, d_as, k_as = get_lc_parameters(dim, milkrecordings, model)
+            params = get_lc_parameters(dim, milkrecordings, model)
+            assert params is not None, "Failed to fit Ali & Schaeffer model parameters"
+            a_as, b_as, c_as, d_as, k_as = (params[0], params[1], params[2], params[3], params[4])
             if max(dim) > 305:
                 t_range = np.arange(1, (max(dim) + 1))
                 y_as = ali_schaeffer_model(t_range, a_as, b_as, c_as, d_as, k_as)
             else:
                 t_range = np.arange(1, 306)
                 y_as = ali_schaeffer_model(t_range, a_as, b_as, c_as, d_as, k_as)
-            return y_as
+            return np.asarray(y_as)
 
         elif model == "fischer":
-            a_f, b_f, c_f = get_lc_parameters(dim, milkrecordings, model)
+            params = get_lc_parameters(dim, milkrecordings, model)
+            assert params is not None, "Failed to fit Fischer model parameters"
+            a_f, b_f, c_f = params[0], params[1], params[2]
             if max(dim) > 305:
                 t_range = np.arange(1, (max(dim) + 1))
                 y_f = fischer_model(t_range, a_f, b_f, c_f)
             else:
                 t_range = np.arange(1, 306)
                 y_f = fischer_model(t_range, a_f, b_f, c_f)
-            return y_f
+            return np.asarray(y_f)
 
         elif model == "milkbot":
-            a_mb, b_mb, c_mb, d_mb = get_lc_parameters(dim, milkrecordings, model)
+            params = get_lc_parameters(dim, milkrecordings, model)
+            assert params is not None, "Failed to fit MilkBot model parameters"
+            a_mb, b_mb, c_mb, d_mb = (params[0], params[1], params[2], params[3])
             if max(dim) > 305:
                 t_range = np.arange(1, (max(dim) + 1))
             else:
                 t_range = np.arange(1, 306)
 
             y_mb = milkbot_model(t_range, a_mb, b_mb, c_mb, d_mb)
-            return y_mb
+            return np.asarray(y_mb)
 
         else:
             raise Exception("Unknown model")
     else:
         if model == "milkbot":
-            if key == None:
+            if key is None:
                 raise Exception("Key needed to use Bayesian fitting engine milkbot")
             else:
+                assert parity is not None, "parity is required for Bayesian fitting"
+                assert breed is not None, "breed is required for Bayesian fitting"
+                assert continent is not None, "continent is required for Bayesian fitting"
                 parameters = bayesian_fit_milkbot_single_lactation(
-                    dim, milkrecordings, key, parity, breed, custom_priors, continent, milk_unit
+                    dim,
+                    milkrecordings,
+                    key,
+                    parity,
+                    breed,
+                    custom_priors,
+                    continent,
+                    milk_unit or "kg",
                 )
                 if max(dim) > 305:
                     t_range = np.arange(1, (max(dim) + 1))
@@ -526,7 +555,7 @@ def fit_lactation_curve(
                         parameters["offset"],
                         parameters["decay"],
                     )
-                return y_mb_bay
+                return np.asarray(y_mb_bay)
         else:
             raise Exception("Bayesian fitting is currently only implemented for milkbot models")
 
@@ -538,10 +567,11 @@ def get_lc_parameters_least_squares(
 
     This helper uses `scipy.optimize.least_squares` to fit the MilkBot model with bounds,
     and returns the fitted parameters.
-    Currently implemented only for the MilkBot model, 
-        as it is more complex and benefits from the robust optimization approach.
-    Other models can be fitted using `get_lc_parameters` with numerical optimisation, 
-        which is generally faster for simpler models.
+    Currently implemented only for the MilkBot model, as it is
+    more complex and benefits from the robust optimization approach.
+    Other models can be fitted using `get_lc_parameters` with
+    numerical optimisation, which is generally faster for simpler
+    models.
 
     Args:
         dim (int): List/array of DIM values.
@@ -663,6 +693,8 @@ def get_lc_parameters(dim, milkrecordings, model="wood") -> tuple[float, ...]:
         a_mb, b_mb, c_mb, d_mb = mb_res.x
         return a_mb, b_mb, c_mb, d_mb
 
+    raise ValueError(f"Unknown model: {model}")
+
 
 def get_chen_priors(parity: int) -> dict:
     """
@@ -737,7 +769,7 @@ def bayesian_fit_milkbot_single_lactation(
     key: str,
     parity=3,
     breed="H",
-    custom_priors: dict | str | None = None,
+    custom_priors: MilkBotPriors | str | None = None,
     continent="USA",
     milk_unit="kg",
 ) -> dict:
@@ -792,7 +824,7 @@ def bayesian_fit_milkbot_single_lactation(
     breed = inputs.breed
     parity = inputs.parity
     continent = inputs.continent
-    custom_priors: dict | str | None = inputs.custom_priors
+    custom_priors = inputs.custom_priors
     milk_unit = inputs.milk_unit
 
     # -----------------------------
@@ -840,10 +872,11 @@ def bayesian_fit_milkbot_single_lactation(
     # Add priors if provided or when using Chen et al. priors
     # -----------------------------
     if custom_priors == "CHEN":
+        assert parity is not None, "parity is required for Chen priors"
         payload["priors"] = get_chen_priors(parity)
 
-    elif custom_priors is not None:
-        payload["priors"] = custom_priors
+    elif isinstance(custom_priors, dict):
+        payload["priors"] = dict(custom_priors)
 
     # -----------------------------
     # Call API
