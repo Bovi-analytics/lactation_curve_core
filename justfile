@@ -2,6 +2,8 @@ set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
 
 #test
 
+#test 2
+
 # Run the lactation_curves FastAPI app locally (default)
 run:
     cd apps/lactation_curves; uv run python -m uvicorn main:app --reload
