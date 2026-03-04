@@ -23,4 +23,4 @@ def health() -> dict[str, str]:
 def predict(request: PredictRequest) -> dict[str, list[float]]:
     t = np.array(request.t)
     predictions = milkbot_model(t, request.a, request.b, request.c, request.d)
-    return {"predictions": predictions.tolist()}
+    return {"predictions": np.asarray(predictions).tolist()}

@@ -25,7 +25,7 @@ Design goals:
   fitting code.
 
 Conventions:
-- DIM is in days; milk yield is in kg or lbs.
+- DIM is in days; milk yield is in kg or lb.
 
 
 Author: Meike van Leerdam
@@ -33,9 +33,23 @@ Last update: 13 feb 2026
 """
 
 from dataclasses import dataclass
+from typing import TypedDict, cast
 
 import numpy as np
 import pandas as pd
+
+
+class ParameterPrior(TypedDict):
+    mean: float
+    sd: float
+
+
+class MilkBotPriors(TypedDict):
+    scale: ParameterPrior
+    ramp: ParameterPrior
+    decay: ParameterPrior
+    offset: ParameterPrior
+    seMilk: float
 
 
 @dataclass
@@ -53,9 +67,12 @@ class PreparedInputs:
         fitting: `"frequentist"` or `"bayesian"` (lowercased) or `None`.
         breed: `"H"` or `"J"` or `None`.
         parity: Lactation number as `int`, if provided; otherwise `None`.
-        continent: Prior source flag for Bayesian flows (`"USA"`, `"EU"`, `"CHEN"`), or `None`.
+        continent: Prior source for MilkBot API (`"USA"`, `"EU"`), or `None`.
         persistency_method: Either `"derived"` or `"literature"`, or `None`.
         lactation_length: Integer horizon (e.g., 305), the string `"max"`, or `None`.
+        milk_unit: Either `"kg"` or `"lb"`, defaulting to `"kg"`.
+        custom_priors: Either a dict of priors, the string `"CHEN"` to use Chen et al. priors,
+            or `None` if not provided.
     """
 
     dim: np.ndarray
@@ -67,6 +84,8 @@ class PreparedInputs:
     continent: str | None = None
     persistency_method: str | None = None
     lactation_length: int | str | None = None
+    milk_unit: str | None = None
+    custom_priors: MilkBotPriors | str | None = None
 
 
 def validate_and_prepare_inputs(
@@ -80,6 +99,8 @@ def validate_and_prepare_inputs(
     continent=None,
     persistency_method=None,
     lactation_length=None,
+    milk_unit="kg",
+    custom_priors=None,
 ) -> PreparedInputs:
     """
     Validate, normalize, and clean input data for lactation curve fitting.
@@ -109,8 +130,14 @@ def validate_and_prepare_inputs(
         Lactation number (parity). If provided, it is coerced to an
         integer.
     continent : str or None, optional
-        Geographic region identifier. Must be one of ``"USA"``,
-        ``"EU"``, or ``"CHEN"`` if provided. Case-insensitive.
+        Geographic region identifier. Must be one of ``"USA"`` or
+        ``"EU"`` if provided. Case-insensitive.
+    milk_unit : str, optional
+        Unit of milk yield measurements. Must be either ``"kg"`` or ``"lb"``. Default is ``"kg"``.
+    custom_priors : dict or str or None, optional
+        Custom prior distributions for Bayesian fitting. If a dict is provided,
+        it must be a dictionary of prior distributions for each parameter in the model.
+        If the string ``"CHEN"`` is provided, the default Chen et al. priors are used.
 
     Extra input for persistency calculation:
         persistency_method (String): way of calculating
@@ -145,7 +172,7 @@ def validate_and_prepare_inputs(
     if len(dim) != len(milkrecordings):
         raise ValueError("dim and milkrecordings must have the same length")
 
-    model = (model or "").strip().lower()
+    model = model.strip().lower() if model else None
 
     if parity is not None:
         parity = int(parity)
@@ -162,8 +189,8 @@ def validate_and_prepare_inputs(
 
     if continent is not None:
         continent = continent.upper()
-        if continent not in {"USA", "EU", "CHEN"}:
-            raise ValueError("continent must be 'USA', 'EU', or 'CHEN'")
+        if continent not in {"USA", "EU"}:
+            raise ValueError("continent must be 'USA' or 'EU'")
 
     dim = np.asarray(dim, dtype=float)
     milkrecordings = np.asarray(milkrecordings, dtype=float)
@@ -187,6 +214,25 @@ def validate_and_prepare_inputs(
         else:
             lactation_length = int(lactation_length)
 
+    if milk_unit not in ["kg", "lb"]:
+        raise ValueError("milk_unit must be 'kg' or 'lb'")
+
+    if custom_priors is not None and not isinstance(custom_priors, (dict, str)):
+        raise ValueError("custom_priors must be a dict, a string, or None")
+
+    if isinstance(custom_priors, str):
+        custom_priors = custom_priors.upper()
+        if custom_priors != "CHEN":
+            raise ValueError(
+                "custom_priors string option must be"
+                " 'CHEN', self defined priors can be"
+                " provided as a dictionary through"
+                " the build_prior function"
+            )
+
+    if isinstance(custom_priors, dict):
+        custom_priors = cast(MilkBotPriors, custom_priors)
+
     return PreparedInputs(
         dim=dim,
         milkrecordings=milkrecordings,
@@ -197,6 +243,8 @@ def validate_and_prepare_inputs(
         continent=continent,
         persistency_method=persistency_method,
         lactation_length=lactation_length,
+        milk_unit=milk_unit,
+        custom_priors=custom_priors,
     )
 
 
@@ -208,7 +256,7 @@ def standardize_lactation_columns(
     test_id_col: str | None = None,
     default_test_id=0,
     max_dim: int = 305,
-):
+) -> pd.DataFrame:
     """
     Standardize column names and structure for lactation data.
 

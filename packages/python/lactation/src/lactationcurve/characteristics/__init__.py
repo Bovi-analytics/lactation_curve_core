@@ -8,7 +8,7 @@ from .lactation_curve_characteristics import (
     persistency_milkbot,
     persistency_wood,
 )
-from .test_interval_method import test_interval_method
+from .method_test_interval import test_interval_method
 
 __all__ = [
     "calculate_characteristic",

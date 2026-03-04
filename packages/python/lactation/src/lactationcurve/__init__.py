@@ -181,6 +181,7 @@ __all__ = ["fitting", "characteristics", "preprocessing"]
 #     sikka_model,
 #     wilmink_model,
 #     wood_model,
+#     build_prior,
 # )
 # from .preprocessing import (
 #     PreparedInputs,
@@ -223,6 +224,7 @@ __all__ = ["fitting", "characteristics", "preprocessing"]
 #     "persistency_milkbot",
 #     "persistency_wood",
 #     "test_interval_method",
+#     "build_prior",
 # ]
 
 # Expose package version (try metadata, fall back to a sensible dev string)
