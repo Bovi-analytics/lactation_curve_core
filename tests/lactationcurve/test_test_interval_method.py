@@ -33,6 +33,7 @@ import time
 import numpy as np
 import pandas as pd
 import pytest
+
 from lactationcurve.characteristics import (
     test_interval_method,
 )

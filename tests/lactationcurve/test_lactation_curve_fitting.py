@@ -48,6 +48,7 @@ import os
 import numpy as np
 import pytest
 from dotenv import find_dotenv, load_dotenv
+
 from lactationcurve.fitting import (
     ali_schaeffer_model,
     bayesian_fit_milkbot_single_lactation,

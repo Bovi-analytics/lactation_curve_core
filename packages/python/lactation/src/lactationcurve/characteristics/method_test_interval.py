@@ -37,11 +37,12 @@ from lactationcurve.preprocessing import standardize_lactation_columns
 
 
 def test_interval_method(
-    df,
-    days_in_milk_col=None,
-    milking_yield_col=None,
-    test_id_col=None,
-    default_test_id=1,
+    df: pd.DataFrame,
+    days_in_milk_col: str | None = None,
+    milking_yield_col: str | None = None,
+    test_id_col: str | None = None,
+    default_test_id: int = 0,
+    max_dim: int = 305,
 ) -> pd.DataFrame:
     """Compute 305-day total milk yield using the ICAR Test Interval Method.
 
@@ -69,7 +70,7 @@ def test_interval_method(
         ValueError: If required columns (DaysInMilk or MilkingYield) cannot be found.
 
     Notes:
-        - Records with DIM > 305 are dropped before computation.
+        - Records with DIM > max_dim are dropped before computation.
         - At least two data points per TestId are required for trapezoidal integration;
           otherwise the lactation is skipped.
     """
@@ -81,7 +82,7 @@ def test_interval_method(
         milking_yield_col=milking_yield_col,
         test_id_col=test_id_col,
         default_test_id=default_test_id,
-        max_dim=305,
+        max_dim=max_dim,
     )
 
     result = []

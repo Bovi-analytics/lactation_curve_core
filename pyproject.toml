@@ -45,6 +45,26 @@ extraPaths = ["packages/python/lactation/src"]
 [tool.pytest.ini_options]
 pythonpath = ["packages/python/lactation/src"]
 testpaths = ["tests"]
+markers = [
+    "basic: Basic ICAR TIM calculation tests",
+    "bayesian: Bayesian model and fitting related tests",
+    "characteristic: Lactation curve characteristic extraction tests",
+    "edge_cases: Edge-case and boundary-condition tests",
+    "errorhandling: Error handling and validation tests",
+    "fitting: Curve-fitting behavior and integration tests",
+    "frequentist: Frequentist model and fitting related tests",
+    "helpers: Helper-function tests for ISLC utilities",
+    "models: Model-specific function and formula tests",
+    "numeric: Numeric helper and approximation tests",
+    "output_validation: Output schema and value validation tests",
+    "islc_method: Core ISLC_method branch and validation tests",
+    "interpolation: Interpolation function behavior tests",
+    "islc: End-to-end ISLC orchestration tests",
+    "representation: Standard representation builder tests",
+    "persistency: Persistency metric tests",
+    "realistic: Real-world data and performance-oriented tests",
+    "utility: Utility function tests",
+]
 
 [tool.semantic_release]
 version_toml = ["packages/python/lactation/pyproject.toml:project.version"]
