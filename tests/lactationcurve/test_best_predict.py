@@ -24,6 +24,7 @@ from lactationcurve.characteristics.best_predict import (
     pivot_milk_recordings_to_matrix,
     preprocess_measured_data,
 )
+from lactationcurve.preprocessing import standardize_lactation_columns
 
 
 @pytest.fixture
@@ -119,6 +120,24 @@ class TestUtilityFunctions:
         assert np.allclose(cov, cov.T)
         assert np.allclose(np.diag(cov), np.ones(4))
 
+    def test_standardize_lactation_columns_renames_and_filters_rows(self):
+        """Standardization should accept aliased column names and filter DIM > 305."""
+        df = pd.DataFrame(
+            {
+                "animalid": [7, 7, 7],
+                "dim": [1, 305, 306],
+                "milk_yield": [10.0, 11.0, 12.0],
+            }
+        )
+
+        standardized = standardize_lactation_columns(df)
+
+        assert list(standardized.columns) == ["TestId", "DaysInMilk", "MilkingYield"]
+        assert len(standardized) == 2
+        assert standardized["TestId"].tolist() == [7, 7]
+        assert standardized["DaysInMilk"].tolist() == [1, 305]
+        assert standardized["MilkingYield"].tolist() == [10.0, 11.0]
+
 
 class TestPredictionFunctions:
     """Test prediction behavior for single and multiple lactations."""
@@ -199,8 +218,31 @@ class TestPredictionFunctions:
         )
 
         assert list(df.columns) == original_columns
-        assert list(result.columns) == ["TestId", "Predicted305MilkYield"]
+        assert list(result.columns) == ["TestId", "LactationMilkYield"]
         assert len(result) == 1
+
+    def test_best_predict_method_accepts_alias_column_names(
+        self, standard_curve, identity_covariance
+    ):
+        """Main API should standardize aliased input columns before prediction."""
+        df = pd.DataFrame(
+            {
+                "animalid": [5, 5],
+                "dim": [1, 2],
+                "milk_yield": [11.0, 12.0],
+                "ignored": ["x", "y"],
+            }
+        )
+
+        result = best_predict_method(
+            df,
+            standard_lc=standard_curve,
+            covariance_matrix=identity_covariance,
+        )
+
+        assert list(result.columns) == ["TestId", "LactationMilkYield"]
+        assert result["TestId"].tolist() == [5]
+        assert result["LactationMilkYield"].iloc[0] == 3053.0
 
     def test_best_predict_method_requires_covariance_or_reference(self, standard_curve):
         """Main API should fail fast when neither covariance nor reference is supplied."""
@@ -233,9 +275,9 @@ class TestIntegration:
         )
 
         assert not result.empty
-        assert "Predicted305MilkYield" in result.columns
-        assert np.isfinite(result["Predicted305MilkYield"]).all()
-        assert result["Predicted305MilkYield"].iloc[0] == pytest.approx(10795.472636)
+        assert "LactationMilkYield" in result.columns
+        assert np.isfinite(result["LactationMilkYield"]).all()
+        assert result["LactationMilkYield"].iloc[0] == pytest.approx(10795.472636)
 
     def test_best_predict_method_fitted_covariance_within_5_percent_for_testid_1483(
         self, test_data_dir, package_data_dir
@@ -258,6 +300,6 @@ class TestIntegration:
             reference_df=training_data,
         )
 
-        predicted = float(result_cov["Predicted305MilkYield"].iloc[0])
+        predicted = float(result_cov["LactationMilkYield"].iloc[0])
         relative_error = abs(predicted - actual_production_1483) / actual_production_1483
         assert relative_error <= 0.05

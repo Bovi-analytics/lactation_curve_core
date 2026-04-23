@@ -21,7 +21,7 @@ optionally create a default `TestId` if missing. Recognized aliases:
 - Milk Yield: `["milkingyield", "testdaymilkyield", "milkyield", "yield"]`
 - Test Id: `["animalid", "testid", "id"]`
 
-Returns a DataFrame with columns: `["TestId", "Total305Yield"]`.
+Returns a DataFrame with columns: `["TestId", "LactationMilkYield"]`.
 
 Notes
 -----
@@ -64,7 +64,7 @@ def test_interval_method(
     Returns:
         pd.DataFrame: Two-column DataFrame with
             - "TestId": identifier per lactation,
-            - "Total305Yield": computed total milk yield over 305 days.
+            - "LactationMilkYield": computed total milk yield over 305 days.
 
     Raises:
         ValueError: If required columns (DaysInMilk or MilkingYield) cannot be found.
@@ -120,7 +120,7 @@ def test_interval_method(
         total_yield = MY0 + total_intermediate + MYend
         result.append((lactation, total_yield))
 
-    return pd.DataFrame(result, columns=["TestId", "Total305Yield"])
+    return pd.DataFrame(result, columns=["TestId", "LactationMilkYield"])
 
 
 # to prevent pytest from trying to collect this function as a test

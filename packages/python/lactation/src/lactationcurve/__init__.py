@@ -59,6 +59,8 @@ Additional models available for a.o. symbolic LCC derivations:
   - time_to_peak, peak_yield, cumulative_milk_yield, persistency
 - **ICAR procedures cumulative milk yield:**
   - Test Interval Method
+  - Interpolation Standard Lactation Curve (ISLC) Method
+  - Best Predict Method
 - Input validation/normalization via `validate_and_prepare_inputs`
 - Caching of symbolic expressions for performance
 
@@ -90,7 +92,24 @@ The package is organized into three main modules:
 
 | `calculate_characteristic` | float (LCC value) |
 
-| `test_interval_method` | DataFrame with 305‑day totals |
+| `test_interval_method` | DataFrame with 305‑day totals per TestId |
+
+| `interpolation_slc_method` | DataFrame with 305‑day totals per TestId  |
+
+| `best_predict_method` | DataFrame with 305‑day totals per TestId |
+
+---
+
+## The meaning of a TestId
+
+
+The `TestId` is an identifier for a lactation,
+which can be used to group records belonging to the same lactation together.
+It is not the same as a cow ID, as a cow can have multiple lactations
+(e.g., across different calvings).
+If a `TestId` column is not provided,
+the package will assume all records belong to a single lactation
+and will create a `TestId` column with all values set to 0.
 
 ---
 

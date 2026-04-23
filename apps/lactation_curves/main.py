@@ -482,7 +482,7 @@ def test_interval(
         "results": [
             {
                 "test_id": row["TestId"],
-                "total_305_yield": float(str(row["Total305Yield"])),
+                "total_305_yield": float(str(row["LactationMilkYield"])),
             }
             for _, row in result_df.iterrows()
         ],

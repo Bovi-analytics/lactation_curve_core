@@ -317,10 +317,10 @@ def test_islc_icar_adds_default_testid_when_missing() -> None:
         std_per_grid_day=std,
     )
 
-    assert list(result.columns) == ["lactation_milk_yield", "TestId"]
+    assert list(result.columns) == ["TestId", "LactationMilkYield"]
     assert len(result) == 1
     assert int(result.loc[0, "TestId"]) == 0
-    assert np.isfinite(float(result.loc[0, "lactation_milk_yield"]))
+    assert np.isfinite(float(result.loc[0, "LactationMilkYield"]))
 
 
 @pytest.mark.islc
@@ -371,7 +371,7 @@ def test_islc_icar_filters_days_over_max_dim_by_default() -> None:
 
     assert len(result) == 1
     assert int(result.loc[0, "TestId"]) == 1
-    assert np.isfinite(float(result.loc[0, "lactation_milk_yield"]))
+    assert np.isfinite(float(result.loc[0, "LactationMilkYield"]))
 
 
 @pytest.mark.islc
@@ -405,10 +405,10 @@ def test_islc_icar_allows_extended_horizon_with_max_dim_max() -> None:
         max_dim="max",
     )
 
-    assert np.isfinite(float(result_305.loc[0, "lactation_milk_yield"]))
-    assert np.isfinite(float(result_max.loc[0, "lactation_milk_yield"]))
-    assert float(result_max.loc[0, "lactation_milk_yield"]) >= float(
-        result_305.loc[0, "lactation_milk_yield"]
+    assert np.isfinite(float(result_305.loc[0, "LactationMilkYield"]))
+    assert np.isfinite(float(result_max.loc[0, "LactationMilkYield"]))
+    assert float(result_max.loc[0, "LactationMilkYield"]) >= float(
+        result_305.loc[0, "LactationMilkYield"]
     )
 
 

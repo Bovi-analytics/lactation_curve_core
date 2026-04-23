@@ -142,7 +142,7 @@ def ISLC_method(
             sum(known measurements (p) + estimated measurements (q)).
         - In the implementation according to the CRV E2 document,
             there should also be a correction factor for the difference between
-             the expected and actual comple lactation yield of the previous lactation.
+             the expected and actual complete lactation yield of the previous lactation.
             However, this correction factor is not included in the current implementation
             as it requires additional data (previous lactation yield) that is not always available.
     """
@@ -295,9 +295,9 @@ def ISLC(
             correlation_matrix=correlation_matrix,
             std_per_grid_day=std_per_grid_day,
         )
-        rows.append({"TestId": test_id, "305_milk_yield": cumulative_yield})
+        rows.append({"TestId": test_id, "LactationMilkYield": cumulative_yield})
 
-    return pd.DataFrame(rows, columns=["305_milk_yield", "TestId"])
+    return pd.DataFrame(rows, columns=["LactationMilkYield", "TestId"])
 
 
 def ISLC_ICAR(
@@ -386,7 +386,7 @@ def ISLC_ICAR(
     rows: list[dict[str, Any]] = []
     for test_id, group in df.groupby("TestId", sort=False):
         if group.empty:
-            rows.append({"TestId": test_id, "305_milk_yield": np.nan})
+            rows.append({"TestId": test_id, "LactationMilkYield": np.nan})
             continue
 
         try:
@@ -401,9 +401,9 @@ def ISLC_ICAR(
         except ValueError:
             cumulative_yield = np.nan
 
-        rows.append({"TestId": test_id, "lactation_milk_yield": cumulative_yield})
+        rows.append({"TestId": test_id, "LactationMilkYield": cumulative_yield})
 
-    return pd.DataFrame(rows, columns=["lactation_milk_yield", "TestId"])
+    return pd.DataFrame(rows, columns=["TestId", "LactationMilkYield"])
 
 
 def ISLC_ICAR_method(

@@ -23,6 +23,7 @@ from scipy.linalg import LinAlgError, cho_factor, cho_solve
 from scipy.optimize import minimize
 
 from lactationcurve.fitting import fit_lactation_curve
+from lactationcurve.preprocessing import standardize_lactation_columns
 
 # get the standard lactation curve ingredients back from the data storage:
 DATA_DIR = Path(__file__).resolve().parents[3] / "data"
@@ -339,6 +340,10 @@ def best_predict_method_single_lac(
 def best_predict_method(
     df: pd.DataFrame,
     standard_lc: np.ndarray,
+    days_in_milk_col: str | None = None,
+    milking_yield_col: str | None = None,
+    test_id_col: str | None = None,
+    default_test_id: int = 0,
     covariance_matrix: np.ndarray | None = None,
     reference_df: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
@@ -354,16 +359,34 @@ def best_predict_method(
             not provided.
 
     Returns:
-        Dataframe with columns ``TestId`` and ``Predicted305MilkYield``.
+        Dataframe with columns ``TestId`` and ``LactationMilkYield``.
 
     Raises:
         ValueError: If neither ``covariance_matrix`` nor ``reference_df`` is
             provided.
     """
+    # Standardize columns and filter DIM <= 305
+    df = standardize_lactation_columns(
+        df,
+        days_in_milk_col=days_in_milk_col,
+        milking_yield_col=milking_yield_col,
+        test_id_col=test_id_col,
+        default_test_id=default_test_id,
+        max_dim=305,
+    )
+
     # Fit covariance if not provided
     if covariance_matrix is None:
         if reference_df is None:
             raise ValueError("Provide covariance_matrix or reference_df")
+        reference_df = df = standardize_lactation_columns(
+            reference_df,
+            days_in_milk_col=days_in_milk_col,
+            milking_yield_col=milking_yield_col,
+            test_id_col=test_id_col,
+            default_test_id=default_test_id,
+            max_dim=305,
+        )
         covariance_matrix = cast(
             np.ndarray, fit_autocorrelation_matrix(reference_df, standard_lc)["B_hat"]
         )
@@ -373,9 +396,6 @@ def best_predict_method(
     df = df.copy()
 
     results = []
-    # If there is no TestId column, create one with all 0 values; this assumes one lactation.
-    if "TestId" not in df.columns:
-        df["TestId"] = 0
 
     for test_id, lactation in df.groupby("TestId"):
         pred = best_predict_method_single_lac(
@@ -383,7 +403,7 @@ def best_predict_method(
             standard_lc,
             covariance_matrix_array,
         )
-        results.append({"TestId": test_id, "Predicted305MilkYield": pred})
+        results.append({"TestId": test_id, "LactationMilkYield": pred})
 
     return pd.DataFrame(results)
 
