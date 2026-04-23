@@ -7,11 +7,11 @@ using the **ICAR guideline**.
 
 > **Contact:** Meike van Leerdam, mbv32@cornell.edu
 >
-> **Authors:** Meike van Leerdam,Judith Osei-Tete, Douwe de Kok, Lucia Trapanese
+> **Authors:** Meike van Leerdam, Douwe de Kok, Judith Osei-Tete, Lucia Trapanese
 
 > **Initial authored:** 2025‑08‑12
 
-> **Updated:** 2026‑02‑24
+> **Updated:** 2026‑04‑23
 
 ---
 
@@ -142,6 +142,43 @@ https://doi.org/10.7717/peerj.54*
 
 ## Current version of the package
 
+
+## Background of the project
+
+The 305‑day yield for milk, fat, and protein is a widely used metric in
+dairy production, and the International Committee for Animal Recording
+(ICAR) provides guidelines outlining approved methods for its calculation.
+However, a global survey of milk recording organizations revealed
+substantial variation in how these methods are implemented. The Test
+Interval Method is used by 74% of the organizations, reflecting a
+preference for methodological simplicity, but it comes with trade-offs in
+estimation accuracy. The use of the other approved methods showed wide
+variation in correction factors, standard lactation curves, test‑day
+definitions, minimum sample requirements, and exclusion criteria. Such
+inconsistencies can introduce yield variability that complicates
+comparisons, for example in international breeding value evaluation, and
+limit the metric’s usefulness in universal models, such as decision
+support tools. Thus, the objective of this work was to reformulate the
+ICAR guideline section 2, procedure 2, into a unified, transparent, and
+accessible software implementation to improve standardization, enhance
+documentation, support continuous development, and increase the accuracy
+of 305‑day yield estimation.
+
+
+To achieve this, the ICAR guideline was converted into an open‑source,
+Python package that serves as the reference implementation for 305‑day
+yield calculation, with lactation‑curve modelling serving as the core of
+the package. In addition to the methods described in the original
+guideline, this work further incorporates 13 lactation‑curve models, with
+both frequentist and Bayesian fitting options, and provides tools to
+derive characteristics such as time to peak, peak yield, cumulative yield,
+and persistency. These features allow the package to be imported directly
+into analytical workflows, enabling users to calculate 305-day yields, fit
+and compare lactation curves, and derive key lactation characteristics, by
+calling a single function. Ongoing development includes an online
+validation platform that will allow users to upload lactation data and
+compare 305‑day yield estimates with reference calculations and observed
+cumulative yield.
 """
 
 

@@ -46,7 +46,7 @@ from scipy.interpolate import interp1d
 from lactationcurve.fitting import fit_lactation_curve
 from lactationcurve.preprocessing import standardize_lactation_columns
 
-DATA_DIR = Path(__file__).resolve().parent / "data"
+DATA_DIR = Path(__file__).resolve().parents[3] / "data"
 GRID_DAYS = [10, 30, 50, 70, 90, 110, 130, 150, 170, 190, 210, 230, 250, 270, 290]
 
 # get the standard lactation curve ingredients back from the data storage:
@@ -852,75 +852,3 @@ def create_standard_lc_representation(
         index=range(1, 306),
     )
     return corr, std_per_grid_day, standard_lactation_curve_grid
-
-
-def _run_demo() -> None:
-    """Run a local demonstration of ISLC on a sample CSV file.
-
-    The sample path points to a local research directory and is intended for
-    manual development runs only.
-    """
-    df_test = pd.read_csv(
-        r"C:\Users\Meike van Leerdam\lactation-curve-research\test_data\L2Anim2Herd654.csv",
-        sep=",",
-    )
-
-    df_test["MilkingYield"] = df_test["TestDayMilkYield"]
-    df_test = df_test.drop(columns=["TestDayMilkYield"])
-    df_test = df_test.loc[df_test["DaysInMilk"] <= 305].copy()
-
-    # subset random samples from the test data to create a new dataframe with only 10 samples
-    df_test_subset = (
-        df_test.sample(n=5, random_state=42).sort_values("DaysInMilk").reset_index(drop=True)
-    )
-
-    # add row of a sample at a gridday as well to see function behavior
-    df_test_subset = (
-        pd.concat(
-            [
-                df_test_subset,
-                pd.DataFrame(
-                    {
-                        "DaysInMilk": [350],
-                        "MilkingYield": [10],
-                    }
-                ),
-            ],
-            ignore_index=True,
-        )
-        .sort_values("DaysInMilk")
-        .reset_index(drop=True)
-    )
-
-    # test with multiple testid's
-    df_test_subset["TestId"] = 1
-    df_test_subset_two = (
-        df_test.sample(n=5, random_state=32).sort_values("DaysInMilk").reset_index(drop=True)
-    )
-    df_test_subset_two["TestId"] = 2
-
-    # combine
-    df_test_subset = pd.concat([df_test_subset, df_test_subset_two], ignore_index=True).reset_index(
-        drop=True
-    )
-
-    islc = ISLC(
-        df=df_test_subset,
-        days_in_milk_col="DaysInMilk",
-        milking_yield_col="MilkingYield",
-    )
-
-    print(f"ISLC method result for 305-day yield: {islc}")
-
-    # try out the ICAR method as well
-    islc_icar = ISLC_ICAR(
-        df=df_test_subset,
-        days_in_milk_col="DaysInMilk",
-        milking_yield_col="MilkingYield",
-    )
-
-    print(f"ICAR method result for 305-day yield: {islc_icar}")
-
-
-if __name__ == "__main__":
-    _run_demo()

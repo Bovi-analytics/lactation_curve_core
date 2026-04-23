@@ -1,3 +1,13 @@
+from .best_predict import (
+    best_predict_method,
+    best_predict_method_single_lac,
+    build_covariance_matrix,
+    center_lactation_data,
+    fit_autocorrelation_matrix,
+    fit_standard_lc,
+    pivot_milk_recordings_to_matrix,
+    preprocess_measured_data,
+)
 from .ISLC import (
     ISLC,
     ISLC_ICAR,
@@ -38,4 +48,12 @@ __all__ = [
     "persistency_milkbot",
     "persistency_wood",
     "test_interval_method",
+    "best_predict_method",
+    "best_predict_method_single_lac",
+    "build_covariance_matrix",
+    "center_lactation_data",
+    "fit_autocorrelation_matrix",
+    "fit_standard_lc",
+    "pivot_milk_recordings_to_matrix",
+    "preprocess_measured_data",
 ]

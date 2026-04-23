@@ -533,21 +533,3 @@ def test_create_standard_lc_representation_adds_testid_when_interpolator_omits_i
     assert isinstance(corr, pd.DataFrame)
     assert isinstance(std_per_grid_day, np.ndarray)
     assert isinstance(curve_grid, pd.Series)
-
-
-def test_run_demo_executes_with_monkeypatched_io(monkeypatch: pytest.MonkeyPatch) -> None:
-    """_run_demo executes without touching filesystem when I/O is monkeypatched."""
-    fake_df = pd.DataFrame(
-        {
-            "DaysInMilk": list(range(1, 13)),
-            "TestDayMilkYield": [float(v) for v in range(10, 22)],
-        }
-    )
-    fake_result = pd.DataFrame({"305_milk_yield": [1234.5], "TestId": [0]})
-    fake_icar_result = pd.DataFrame({"lactation_milk_yield": [1200.0], "TestId": [0]})
-
-    monkeypatch.setattr(islc_mod.pd, "read_csv", lambda *args, **kwargs: fake_df.copy())
-    monkeypatch.setattr(islc_mod, "ISLC", lambda *args, **kwargs: fake_result)
-    monkeypatch.setattr(islc_mod, "ISLC_ICAR", lambda *args, **kwargs: fake_icar_result)
-
-    islc_mod._run_demo()
