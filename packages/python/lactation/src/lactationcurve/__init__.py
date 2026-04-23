@@ -94,7 +94,7 @@ The package is organized into three main modules:
 
 | `test_interval_method` | DataFrame with 305‑day totals per TestId |
 
-| `interpolation_slc_method` | DataFrame with 305‑day totals per TestId  |
+| `ISLC_method` | DataFrame with 305‑day totals per TestId  |
 
 | `best_predict_method` | DataFrame with 305‑day totals per TestId |
 

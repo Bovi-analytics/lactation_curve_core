@@ -1,16 +1,21 @@
 """Interpolation using Standard Lactation Curves (ISLC).
 
-This module implements the ISLC (Iterative Standard Lactation Curve)
-method for estimating lactation milk production from intermittent test-day
-records. The implementation follows the CRV/ICAR approach based on Wilmink-
-style standard lactation curves and correlation-based deviation corrections.
+This module implements the ISLC family of methods for estimating lactation
+milk production from intermittent test-day records. The implementation follows
+the CRV/ICAR approach based on Wilmink-style standard lactation curves and
+correlation-based deviation corrections.
 
 The main entry points are:
 - ``ISLC_method``: compute a single lactation's estimated 305-d yield from
     interpolated grid measurements.
-- ``ISLC``: apply ``ISLC_method`` per `TestId` in a pandas DataFrame.
-- ``ISLC_ICAR``: apply ``ISLC_ICAR_method`` per `TestId` in a pandas
-    DataFrame.
+- ``ISLC``: apply ``ISLC_method`` per ``TestId`` in a pandas DataFrame.
+- ``ISLC_original_method``: compute a single lactation's estimated
+    305-d yield using the technique described in the original paper.
+    Wilmink et al. (1987)
+    "Comparison of different methods of predicting 305-day milk yield
+    using means calculated from within-herd lactation curves"
+- ``ISLC_original``: apply ``ISLC_original_method`` per ``TestId``
+    in a pandas DataFrame.
 - ``interpolation_standard_lc``: interpolate measured test-day yields onto
     the DIM grid using the standard lactation curve to guide slopes.
 - ``linear_interpd_all_to_grid`` and ``linear_interpd_closest_to_grid``:
@@ -102,205 +107,7 @@ class InterpolationMethod(Protocol):
         ...
 
 
-def ISLC_method(
-    df: pd.DataFrame,
-    standard_lc: pd.Series | npt.NDArray[np.float64],
-    correlation_matrix: pd.DataFrame,
-    std_per_grid_day: npt.NDArray[np.float64],
-) -> float:
-    """Estimate 305-day milk yield for a single interpolated lactation.
-
-    This function computes an estimated 305-day yield by combining three
-    components: known production from interpolated measurements, the
-    population mean for missing grid days (from ``standard_lc``), and a
-    correlation-based deviation correction derived from ``correlation_matrix``.
-
-    Args:
-        df: DataFrame containing at least the columns ``GridDay`` and
-            ``MilkYieldInterp`` (values already interpolated onto the grid).
-        standard_lc: Standard lactation curve values indexed by grid day.
-        correlation_matrix: Correlation coefficients between grid-day yields
-            (matrix-like, rows/columns ordered as the grid).
-        std_per_grid_day: 1-D array of standard deviations for each grid day.
-
-    Returns:
-        A float with the estimated 305-day milk yield.
-
-    Raises:
-        ValueError: if any measured day in ``df`` is not present in the
-            expected global ``grid``.
-
-    Notes:
-        - The routine assumes fixed recording intervals of 20 days, except
-          that the final interval (if day 290 is present) is 25 days.
-        - The implementation expects a global ``grid`` variable to be
-          defined and aligned with ``standard_lc`` and
-          ``std_per_grid_day``.
-        - The amount of estimated milk yields depends on the
-            availability of measured milk yields.
-        - Lactation yield is:
-            sum(known measurements (p) + estimated measurements (q)).
-        - In the implementation according to the CRV E2 document,
-            there should also be a correction factor for the difference between
-             the expected and actual complete lactation yield of the previous lactation.
-            However, this correction factor is not included in the current implementation
-            as it requires additional data (previous lactation yield) that is not always available.
-    """
-    grid = GRID_DAYS
-    standard_lc_series = _curve_to_series(standard_lc)
-
-    # --- Validate that all measurements lie on the expected grid -------
-    measured_days = df["GridDay"].values
-    if any(day not in grid for day in measured_days):
-        raise ValueError("At least one DIM in the input df is not part of the grid.")
-
-    # --- Prepare basic components -------------------------------------
-    df = df.sort_values("GridDay")
-
-    # days missing from measurement → need prediction
-    days_to_predict = [day for day in grid if day not in measured_days]
-    pred_idx = [list(grid).index(d) for d in days_to_predict]
-
-    # mean expected milk yield from standard curve
-    mean_lc = pd.Series([_curve_value(standard_lc_series, g) for g in grid], index=grid)
-
-    # --- Compute known production (sum of actual measurements) ---------
-    if 290 in measured_days:
-        # special last interval: 25 days
-        known_prod = df["MilkYieldInterp"][:-1].sum() * 20 + df["MilkYieldInterp"].iloc[-1] * 25
-    else:
-        known_prod = df["MilkYieldInterp"].sum() * 20
-
-    # --- Compute population mean for missing days ----------------------
-    pop_mean_missing = mean_lc.loc[days_to_predict]
-
-    if 290 in pop_mean_missing.index:
-        population_mean = pop_mean_missing.iloc[:-1].sum() * 20 + pop_mean_missing.iloc[-1] * 25
-    else:
-        population_mean = pop_mean_missing.sum() * 20
-
-    # --- Compute correlation-based correction --------------------------
-    days_to_predict_np = np.array(days_to_predict)
-    measured_days_np = np.array(measured_days)
-
-    # for each missing day: find closest measured day
-    closest_measured = [
-        measured_days_np[np.argmin(np.abs(measured_days_np - g))] for g in days_to_predict_np
-    ]
-    closest_idx = [list(grid).index(d) for d in closest_measured]
-
-    b_star_list = []
-    for pi, qi in zip(closest_idx, pred_idx):
-        bpj = correlation_matrix.iloc[pi, qi]
-        stdj = std_per_grid_day[qi]
-        stdp = std_per_grid_day[pi]
-        b_star_list.append(bpj * stdj / stdp)
-
-    # scale correction by interval lengths
-    if 290 in measured_days:
-        # last interval belongs to prediction group
-        correction_weighted = sum(b_star_list[:-1]) * 20
-    else:
-        correction_weighted = sum(b_star_list[:-1]) * 20 + b_star_list[-1] * 25
-
-    last_day = df["GridDay"].iloc[-1]
-    last_yield = df["MilkYieldInterp"].iloc[-1]
-    mean_last = mean_lc.loc[last_day]
-
-    correction = correction_weighted * (last_yield - mean_last)
-
-    # --- Final sum -----------------------------------------------------
-    final_milk_yield = known_prod + population_mean + correction
-    return float(final_milk_yield)
-
-
 def ISLC(
-    df: pd.DataFrame,
-    days_in_milk_col: str | None = None,
-    milking_yield_col: str | None = None,
-    test_id_col: str | None = None,
-    default_test_id: int = 0,
-    standard_lc_305: pd.Series | npt.NDArray[np.float64] = STANDARD_CURVE,
-    correlation_matrix: pd.DataFrame = CORR_MATRIX,
-    std_per_grid_day: npt.NDArray[np.float64] = STDs,
-) -> pd.DataFrame:
-    """Compute estimated 305-day milk yields for lactations in a DataFrame.
-
-    The function groups ``df`` by ``TestId`` (or treats the entire frame as a
-    single lactation if no ``TestId`` column exists), interpolates observed
-    yields onto the DIM grid, and applies :func:`ISLC_method` to each
-    lactation to produce an estimated 305-d yield.
-
-    Args:
-       df (pd.DataFrame): Input DataFrame with at least DaysInMilk, MilkingYield,
-            and (optionally) TestId columns (names can be provided via arguments
-            or matched via known aliases, case-insensitive).
-        days_in_milk_col (str | None): Column name in ``df`` that contains DIM.
-        milking_yield_col (str | None): Column name in ``df`` that contains measured
-            milk yield for the corresponding DIM.
-        test_id_col (str | None): Column name in ``df`` that identifies
-            unique lactations (e.g., animal ID or lactation ID).
-            If None, a single TestId==default_test_id is created.
-        default_test_id (int): If ``test_id_col`` is None, a new column
-            ``TestId`` is created with this value for all rows.
-            This means that the entire input DataFrame will be treated as one lactation.
-        standard_lc_305 (pd.Series | npt.NDArray[np.float64]): Standard
-            lactation curve values aligned to the grid
-            (default: module ``STANDARD_CURVE``).
-        correlation_matrix (pd.DataFrame): Correlation matrix for grid-day yields
-            (default: module ``CORR_MATRIX``).
-        std_per_grid_day (npt.NDArray[np.float64]): Standard deviations per
-            grid day (default: module
-            ``STDs``).
-
-    Returns:
-        pd.DataFrame: Two-column DataFrame with
-            - "TestId": identifier per lactation,
-            - "305_milk_yield": computed total milk yield over 305 days.
-
-    Raises:
-        ValueError: If required columns (DaysInMilk or MilkingYield) cannot be found.
-
-    Notes:
-        - Records with DIM > 305 are dropped before computation.
-        - If ``TestId`` is absent in ``df``, a single
-            TestId==default_test_id is created and
-            the entire input is processed as one lactation.
-    """
-    # Standardize columns and filter DIM <= 305
-    df = standardize_lactation_columns(
-        df,
-        days_in_milk_col=days_in_milk_col,
-        milking_yield_col=milking_yield_col,
-        test_id_col=test_id_col,
-        default_test_id=default_test_id,
-        max_dim=305,
-    )
-
-    rows: list[dict[str, Any]] = []
-    for test_id, group in df.groupby("TestId", sort=False):
-        lactation = interpolation_standard_lc(
-            group,
-            column_name_dim="DaysInMilk",
-            milking_yield_col="MilkingYield",
-            standard_lc=standard_lc_305,
-        )
-        if lactation.empty:
-            rows.append({"TestId": test_id, "305_milk_yield": np.nan})
-            continue
-
-        cumulative_yield = ISLC_method(
-            df=lactation,
-            standard_lc=standard_lc_305,
-            correlation_matrix=correlation_matrix,
-            std_per_grid_day=std_per_grid_day,
-        )
-        rows.append({"TestId": test_id, "LactationMilkYield": cumulative_yield})
-
-    return pd.DataFrame(rows, columns=["LactationMilkYield", "TestId"])
-
-
-def ISLC_ICAR(
     df: pd.DataFrame,
     days_in_milk_col: str | None = None,
     milking_yield_col: str | None = None,
@@ -313,7 +120,7 @@ def ISLC_ICAR(
 ) -> pd.DataFrame:
     """Compute ICAR-based lactation milk yields for lactations in a DataFrame.
 
-    This method adapts the original ISLC approach with some key differences:
+    This method adapts the original ISLC_original approach with some key differences:
     - It includes measured values in the final integration, not only
       interpolated grid values.
     - The prediction grid includes day 0 and day 305.
@@ -325,8 +132,8 @@ def ISLC_ICAR(
 
     The function groups ``df`` by ``TestId`` (or treats the entire frame as a
     single lactation if no ``TestId`` column exists) and applies
-    :func:`ISLC_ICAR_method` to each lactation to produce an estimated
-    lactation yield over the selected DIM horizon.
+    :func:`ISLC_method` to each lactation to produce an estimated lactation
+    yield over the selected DIM horizon.
 
     Args:
         df (pd.DataFrame): Input DataFrame with at least DaysInMilk,
@@ -390,7 +197,7 @@ def ISLC_ICAR(
             continue
 
         try:
-            cumulative_yield = ISLC_ICAR_method(
+            cumulative_yield = ISLC_method(
                 df=group,
                 standard_lc=standard_lc_305,
                 correlation_matrix=correlation_matrix,
@@ -406,7 +213,7 @@ def ISLC_ICAR(
     return pd.DataFrame(rows, columns=["TestId", "LactationMilkYield"])
 
 
-def ISLC_ICAR_method(
+def ISLC_method(
     df: pd.DataFrame,
     standard_lc: pd.Series | npt.NDArray[np.float64],
     correlation_matrix: pd.DataFrame,
@@ -531,6 +338,204 @@ def ISLC_ICAR_method(
     total_yield = float(np.nansum(trapezoid_values))
 
     return total_yield
+
+
+def ISLC_original_method(
+    df: pd.DataFrame,
+    standard_lc: pd.Series | npt.NDArray[np.float64],
+    correlation_matrix: pd.DataFrame,
+    std_per_grid_day: npt.NDArray[np.float64],
+) -> float:
+    """Estimate 305-day milk yield for a single interpolated lactation.
+
+    This function computes an estimated 305-day yield by combining three
+    components: known production from interpolated measurements, the
+    population mean for missing grid days (from ``standard_lc``), and a
+    correlation-based deviation correction derived from ``correlation_matrix``.
+
+    Args:
+        df: DataFrame containing at least the columns ``GridDay`` and
+            ``MilkYieldInterp`` (values already interpolated onto the grid).
+        standard_lc: Standard lactation curve values indexed by grid day.
+        correlation_matrix: Correlation coefficients between grid-day yields
+            (matrix-like, rows/columns ordered as the grid).
+        std_per_grid_day: 1-D array of standard deviations for each grid day.
+
+    Returns:
+        A float with the estimated 305-day milk yield.
+
+    Raises:
+        ValueError: if any measured day in ``df`` is not present in the
+            expected global ``grid``.
+
+    Notes:
+        - The routine assumes fixed recording intervals of 20 days, except
+          that the final interval (if day 290 is present) is 25 days.
+        - The implementation expects a global ``grid`` variable to be
+          defined and aligned with ``standard_lc`` and
+          ``std_per_grid_day``.
+        - The amount of estimated milk yields depends on the
+            availability of measured milk yields.
+        - Lactation yield is:
+            sum(known measurements (p) + estimated measurements (q)).
+        - In the implementation according to the CRV E2 document,
+            there should also be a correction factor for the difference between
+             the expected and actual complete lactation yield of the previous lactation.
+            However, this correction factor is not included in the current implementation
+            as it requires additional data (previous lactation yield) that is not always available.
+    """
+    grid = GRID_DAYS
+    standard_lc_series = _curve_to_series(standard_lc)
+
+    # --- Validate that all measurements lie on the expected grid -------
+    measured_days = df["GridDay"].values
+    if any(day not in grid for day in measured_days):
+        raise ValueError("At least one DIM in the input df is not part of the grid.")
+
+    # --- Prepare basic components -------------------------------------
+    df = df.sort_values("GridDay")
+
+    # days missing from measurement → need prediction
+    days_to_predict = [day for day in grid if day not in measured_days]
+    pred_idx = [list(grid).index(d) for d in days_to_predict]
+
+    # mean expected milk yield from standard curve
+    mean_lc = pd.Series([_curve_value(standard_lc_series, g) for g in grid], index=grid)
+
+    # --- Compute known production (sum of actual measurements) ---------
+    if 290 in measured_days:
+        # special last interval: 25 days
+        known_prod = df["MilkYieldInterp"][:-1].sum() * 20 + df["MilkYieldInterp"].iloc[-1] * 25
+    else:
+        known_prod = df["MilkYieldInterp"].sum() * 20
+
+    # --- Compute population mean for missing days ----------------------
+    pop_mean_missing = mean_lc.loc[days_to_predict]
+
+    if 290 in pop_mean_missing.index:
+        population_mean = pop_mean_missing.iloc[:-1].sum() * 20 + pop_mean_missing.iloc[-1] * 25
+    else:
+        population_mean = pop_mean_missing.sum() * 20
+
+    # --- Compute correlation-based correction --------------------------
+    days_to_predict_np = np.array(days_to_predict)
+    measured_days_np = np.array(measured_days)
+
+    # for each missing day: find closest measured day
+    closest_measured = [
+        measured_days_np[np.argmin(np.abs(measured_days_np - g))] for g in days_to_predict_np
+    ]
+    closest_idx = [list(grid).index(d) for d in closest_measured]
+
+    b_star_list = []
+    for pi, qi in zip(closest_idx, pred_idx):
+        bpj = correlation_matrix.iloc[pi, qi]
+        stdj = std_per_grid_day[qi]
+        stdp = std_per_grid_day[pi]
+        b_star_list.append(bpj * stdj / stdp)
+
+    # scale correction by interval lengths
+    if 290 in measured_days:
+        # last interval belongs to prediction group
+        correction_weighted = sum(b_star_list[:-1]) * 20
+    else:
+        correction_weighted = sum(b_star_list[:-1]) * 20 + b_star_list[-1] * 25
+
+    last_day = df["GridDay"].iloc[-1]
+    last_yield = df["MilkYieldInterp"].iloc[-1]
+    mean_last = mean_lc.loc[last_day]
+
+    correction = correction_weighted * (last_yield - mean_last)
+
+    # --- Final sum -----------------------------------------------------
+    final_milk_yield = known_prod + population_mean + correction
+    return float(final_milk_yield)
+
+
+def ISLC_original(
+    df: pd.DataFrame,
+    days_in_milk_col: str | None = None,
+    milking_yield_col: str | None = None,
+    test_id_col: str | None = None,
+    default_test_id: int = 0,
+    standard_lc_305: pd.Series | npt.NDArray[np.float64] = STANDARD_CURVE,
+    correlation_matrix: pd.DataFrame = CORR_MATRIX,
+    std_per_grid_day: npt.NDArray[np.float64] = STDs,
+) -> pd.DataFrame:
+    """Compute estimated 305-day milk yields for lactations in a DataFrame.
+
+    The function groups ``df`` by ``TestId`` (or treats the entire frame as a
+    single lactation if no ``TestId`` column exists), interpolates observed
+    yields onto the DIM grid, and applies :func:`ISLC_original_method`
+    to each lactation to produce an estimated 305-d yield.
+
+    Args:
+       df (pd.DataFrame): Input DataFrame with at least DaysInMilk, MilkingYield,
+            and (optionally) TestId columns (names can be provided via arguments
+            or matched via known aliases, case-insensitive).
+        days_in_milk_col (str | None): Column name in ``df`` that contains DIM.
+        milking_yield_col (str | None): Column name in ``df`` that contains measured
+            milk yield for the corresponding DIM.
+        test_id_col (str | None): Column name in ``df`` that identifies
+            unique lactations (e.g., animal ID or lactation ID).
+            If None, a single TestId==default_test_id is created.
+        default_test_id (int): If ``test_id_col`` is None, a new column
+            ``TestId`` is created with this value for all rows.
+            This means that the entire input DataFrame will be treated as one lactation.
+        standard_lc_305 (pd.Series | npt.NDArray[np.float64]): Standard
+            lactation curve values aligned to the grid
+            (default: module ``STANDARD_CURVE``).
+        correlation_matrix (pd.DataFrame): Correlation matrix for grid-day yields
+            (default: module ``CORR_MATRIX``).
+        std_per_grid_day (npt.NDArray[np.float64]): Standard deviations per
+            grid day (default: module
+            ``STDs``).
+
+    Returns:
+        pd.DataFrame: Two-column DataFrame with
+            - "TestId": identifier per lactation,
+            - "305_milk_yield": computed total milk yield over 305 days.
+
+    Raises:
+        ValueError: If required columns (DaysInMilk or MilkingYield) cannot be found.
+
+    Notes:
+        - Records with DIM > 305 are dropped before computation.
+        - If ``TestId`` is absent in ``df``, a single
+            TestId==default_test_id is created and
+            the entire input is processed as one lactation.
+    """
+    # Standardize columns and filter DIM <= 305
+    df = standardize_lactation_columns(
+        df,
+        days_in_milk_col=days_in_milk_col,
+        milking_yield_col=milking_yield_col,
+        test_id_col=test_id_col,
+        default_test_id=default_test_id,
+        max_dim=305,
+    )
+
+    rows: list[dict[str, Any]] = []
+    for test_id, group in df.groupby("TestId", sort=False):
+        lactation = interpolation_standard_lc(
+            group,
+            column_name_dim="DaysInMilk",
+            milking_yield_col="MilkingYield",
+            standard_lc=standard_lc_305,
+        )
+        if lactation.empty:
+            rows.append({"TestId": test_id, "305_milk_yield": np.nan})
+            continue
+
+        cumulative_yield = ISLC_original_method(
+            df=lactation,
+            standard_lc=standard_lc_305,
+            correlation_matrix=correlation_matrix,
+            std_per_grid_day=std_per_grid_day,
+        )
+        rows.append({"TestId": test_id, "LactationMilkYield": cumulative_yield})
+
+    return pd.DataFrame(rows, columns=["LactationMilkYield", "TestId"])
 
 
 """
@@ -763,7 +768,7 @@ def create_standard_lc_representation(
     This function estimates the correlation structure and standard deviations
     of milk yields across grid days, and refits a Wilmink lactation curve to
     the interpolated data. The outputs can be used as inputs to the
-    ``ISLC_method`` or ``ISLC`` functions for predicting 305-d yields.
+    ``ISLC_method`` or ``ISLC_original`` functions for predicting 305-d yields.
 
     The process standardizes yields per animal and computes row-wise
     (per-animal) statistics, then derives relationships across grid days.

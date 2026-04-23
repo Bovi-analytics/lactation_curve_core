@@ -10,9 +10,9 @@ from .best_predict import (
 )
 from .ISLC import (
     ISLC,
-    ISLC_ICAR,
-    ISLC_ICAR_method,
     ISLC_method,
+    ISLC_original,
+    ISLC_original_method,
     create_standard_lc_representation,
     interpolation_standard_lc,
     linear_interpd_all_to_grid,
@@ -32,9 +32,9 @@ from .method_test_interval import test_interval_method
 
 __all__ = [
     "ISLC",
-    "ISLC_ICAR",
-    "ISLC_ICAR_method",
     "ISLC_method",
+    "ISLC_original",
+    "ISLC_original_method",
     "calculate_characteristic",
     "create_standard_lc_representation",
     "interpolation_standard_lc",

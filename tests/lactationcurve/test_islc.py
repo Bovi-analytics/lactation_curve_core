@@ -10,7 +10,7 @@ Test Categories:
     - ISLC method core: Validation and branch coverage for ``ISLC_method``
     - Interpolation methods: ``interpolation_standard_lc`` and linear helpers
     - ISLC orchestration: Grouping, filtering, and per-lactation output
-    - ISLC ICAR orchestration: Grouping, filtering, and per-lactation output
+    - ISLC original orchestration: Grouping, filtering, and per-lactation output
     - Representation builder: Validation and output-shape checks for
       ``create_standard_lc_representation``
 
@@ -29,7 +29,7 @@ Usage:
         pytest tests/lactationcurve/test_islc.py -m representation -v
 
 Author:
-    Meike van Leerdam
+    Meike van Leerdam and copilot
 """
 
 from importlib import import_module
@@ -48,14 +48,14 @@ def _standard_curve_series() -> pd.Series:
 
 def _identity_corr_and_std() -> tuple[pd.DataFrame, np.ndarray]:
     """Create neutral correlation and std inputs for ISLC tests."""
-    n = len(islc_mod.GRID_DAYS)
+    n = len(islc_mod.GRID_DAYS) + 2  # includes day 0 and day 305
     corr = pd.DataFrame(np.eye(n), index=range(n), columns=range(n))
     std = np.ones(n, dtype=float)
     return corr, std
 
 
 def _identity_corr_and_std_icar() -> tuple[pd.DataFrame, np.ndarray]:
-    """Create neutral correlation and std inputs for ISLC_ICAR tests."""
+    """Create neutral correlation and std inputs for ISLC original tests."""
     n = len(islc_mod.GRID_DAYS) + 2  # includes day 0 and day 305
     corr = pd.DataFrame(np.eye(n), index=range(n), columns=range(n))
     std = np.ones(n, dtype=float)
@@ -92,13 +92,14 @@ def test_curve_value_prefers_label_then_fallback_positional() -> None:
 
 
 @pytest.mark.islc_method
-def test_islc_method_raises_for_non_grid_day() -> None:
-    """ISLC_method fails fast when input has DIM values outside GRID_DAYS."""
+def test_islc_method_handles_non_grid_day_input() -> None:
+    """ISLC_method still produces a finite value when input DIMs are off-grid."""
     corr, std = _identity_corr_and_std()
-    lactation = pd.DataFrame({"GridDay": [11, 30], "MilkYieldInterp": [30.0, 28.0]})
+    lactation = pd.DataFrame({"DaysInMilk": [11, 30], "MilkingYield": [30.0, 28.0]})
 
-    with pytest.raises(ValueError, match="not part of the grid"):
-        islc_mod.ISLC_method(lactation, _standard_curve_series(), corr, std)
+    value = islc_mod.ISLC_method(lactation, _standard_curve_series(), corr, std)
+    assert isinstance(value, float)
+    assert np.isfinite(value)
 
 
 @pytest.mark.islc_method
@@ -107,8 +108,8 @@ def test_islc_method_returns_float_when_day_290_present() -> None:
     corr, std = _identity_corr_and_std()
     lactation = pd.DataFrame(
         {
-            "GridDay": [10, 30, 50, 290],
-            "MilkYieldInterp": [30.0, 29.0, 28.0, 20.0],
+            "DaysInMilk": [10, 30, 50, 290],
+            "MilkingYield": [30.0, 29.0, 28.0, 20.0],
         }
     )
 
@@ -219,10 +220,10 @@ def test_islc_adds_default_testid_when_missing() -> None:
         std_per_grid_day=std,
     )
 
-    assert list(result.columns) == ["305_milk_yield", "TestId"]
+    assert list(result.columns) == ["TestId", "LactationMilkYield"]
     assert len(result) == 1
     assert int(result.loc[0, "TestId"]) == 0
-    assert np.isfinite(float(result.loc[0, "305_milk_yield"]))
+    assert np.isfinite(float(result.loc[0, "LactationMilkYield"]))
 
 
 @pytest.mark.islc
@@ -273,7 +274,7 @@ def test_islc_filters_days_over_305() -> None:
 
     assert len(result) == 1
     assert int(result.loc[0, "TestId"]) == 1
-    assert np.isfinite(float(result.loc[0, "305_milk_yield"]))
+    assert np.isfinite(float(result.loc[0, "LactationMilkYield"]))
 
 
 @pytest.mark.islc
@@ -299,16 +300,16 @@ def test_islc_returns_nan_for_non_interpolable_lactation() -> None:
 
     assert len(result) == 1
     assert int(result.loc[0, "TestId"]) == 7
-    assert np.isnan(float(result.loc[0, "305_milk_yield"]))
+    assert np.isnan(float(result.loc[0, "LactationMilkYield"]))
 
 
 @pytest.mark.islc
 def test_islc_icar_adds_default_testid_when_missing() -> None:
-    """ISLC_ICAR treats data without TestId as a single lactation with TestId==0."""
+    """ISLC treats data without TestId as a single lactation with TestId==0."""
     df = pd.DataFrame({"DaysInMilk": [10, 30, 50], "MilkingYield": [32.0, 31.0, 30.0]})
     corr, std = _identity_corr_and_std_icar()
 
-    result = islc_mod.ISLC_ICAR(
+    result = islc_mod.ISLC(
         df=df,
         days_in_milk_col="DaysInMilk",
         milking_yield_col="MilkingYield",
@@ -325,7 +326,7 @@ def test_islc_icar_adds_default_testid_when_missing() -> None:
 
 @pytest.mark.islc
 def test_islc_icar_processes_multiple_lactations() -> None:
-    """ISLC_ICAR returns one row per unique TestId for multi-lactation input."""
+    """ISLC returns one row per unique TestId for multi-lactation input."""
     df = pd.DataFrame(
         {
             "DaysInMilk": [10, 30, 50, 10, 30, 50],
@@ -335,7 +336,7 @@ def test_islc_icar_processes_multiple_lactations() -> None:
     )
     corr, std = _identity_corr_and_std_icar()
 
-    result = islc_mod.ISLC_ICAR(
+    result = islc_mod.ISLC(
         df=df,
         days_in_milk_col="DaysInMilk",
         milking_yield_col="MilkingYield",
@@ -350,7 +351,7 @@ def test_islc_icar_processes_multiple_lactations() -> None:
 
 @pytest.mark.islc
 def test_islc_icar_filters_days_over_max_dim_by_default() -> None:
-    """ISLC_ICAR defaults to max_dim=305 and drops records above that threshold."""
+    """ISLC defaults to max_dim=305 and drops records above that threshold."""
     df = pd.DataFrame(
         {
             "DaysInMilk": [10, 30, 50, 400],
@@ -360,7 +361,7 @@ def test_islc_icar_filters_days_over_max_dim_by_default() -> None:
     )
     corr, std = _identity_corr_and_std_icar()
 
-    result = islc_mod.ISLC_ICAR(
+    result = islc_mod.ISLC(
         df=df,
         days_in_milk_col="DaysInMilk",
         milking_yield_col="MilkingYield",
@@ -376,7 +377,7 @@ def test_islc_icar_filters_days_over_max_dim_by_default() -> None:
 
 @pytest.mark.islc
 def test_islc_icar_allows_extended_horizon_with_max_dim_max() -> None:
-    """ISLC_ICAR can include DIM > 305 when max_dim='max'."""
+    """ISLC can include DIM > 305 when max_dim='max'."""
     df = pd.DataFrame(
         {
             "DaysInMilk": [10, 30, 50, 350],
@@ -386,7 +387,7 @@ def test_islc_icar_allows_extended_horizon_with_max_dim_max() -> None:
     )
     corr, std = _identity_corr_and_std_icar()
 
-    result_305 = islc_mod.ISLC_ICAR(
+    result_305 = islc_mod.ISLC(
         df=df,
         days_in_milk_col="DaysInMilk",
         milking_yield_col="MilkingYield",
@@ -395,7 +396,7 @@ def test_islc_icar_allows_extended_horizon_with_max_dim_max() -> None:
         std_per_grid_day=std,
         max_dim=305,
     )
-    result_max = islc_mod.ISLC_ICAR(
+    result_max = islc_mod.ISLC(
         df=df,
         days_in_milk_col="DaysInMilk",
         milking_yield_col="MilkingYield",
@@ -533,3 +534,51 @@ def test_create_standard_lc_representation_adds_testid_when_interpolator_omits_i
     assert isinstance(corr, pd.DataFrame)
     assert isinstance(std_per_grid_day, np.ndarray)
     assert isinstance(curve_grid, pd.Series)
+
+
+# class TestIntegration:
+#     """Integration tests using real fixture files and package-provided matrices."""
+
+#     def test_islc_method_real_file_smoke_test(self, test_data_dir, package_data_dir):
+#         """Real-file prediction with provided covariance should be finite and stable."""
+#         full_lac_single = pd.read_csv(test_data_dir / "l2_anim2_herd654.csv")
+#         full_lac_single = full_lac_single.rename(columns={"TestDayMilkYield": "MilkingYield"})
+
+#         covariance_matrix = np.load(package_data_dir / "covariance_matrix_best_predict.npy")
+#         standard_curve = np.load(package_data_dir / "standard_lc_wood.npy")
+
+#         result = best_predict_method(
+#             full_lac_single,
+#             standard_lc=standard_curve,
+#             covariance_matrix=covariance_matrix,
+#         )
+
+#         assert not result.empty
+#         assert "LactationMilkYield" in result.columns
+#         assert np.isfinite(result["LactationMilkYield"]).all()
+#         assert result["LactationMilkYield"].iloc[0] == pytest.approx(10795.472636)
+
+#     def test_best_predict_method_fitted_covariance_within_5_percent_for_testid_1483(
+#         self, test_data_dir, package_data_dir
+#     ):
+#         """Leave-one-id-out fit should predict TestId 1483 within 5% of known total."""
+#         test_day_df = pd.read_csv(test_data_dir / "TestDataSet.csv")
+#         test_day_df = test_day_df.rename(columns={"DailyMilkingYield": "MilkingYield"})
+
+#         test_id_to_predict = 1483
+#         actual_production_1483 = 10573.1
+
+#         training_data = test_day_df.loc[test_day_df["TestId"] != test_id_to_predict].copy()
+#         target_data = test_day_df.loc[test_day_df["TestId"] == test_id_to_predict].copy()
+
+#         assert not target_data.empty, "TestDataSet.csv does not contain TestId 1483"
+
+#         result_cov = best_predict_method(
+#             target_data,
+#             standard_lc=np.load(package_data_dir / "standard_lc_wood.npy"),
+#             reference_df=training_data,
+#         )
+
+#         predicted = float(result_cov["LactationMilkYield"].iloc[0])
+#         relative_error = abs(predicted - actual_production_1483) / actual_production_1483
+#         assert relative_error <= 0.05
