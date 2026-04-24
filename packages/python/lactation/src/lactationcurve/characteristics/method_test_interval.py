@@ -21,7 +21,7 @@ optionally create a default `TestId` if missing. Recognized aliases:
 - Milk Yield: `["milkingyield", "testdaymilkyield", "milkyield", "yield"]`
 - Test Id: `["animalid", "testid", "id"]`
 
-Returns a DataFrame with columns: `["TestId", "Total305Yield"]`.
+Returns a DataFrame with columns: `["TestId", "LactationMilkYield"]`.
 
 Notes
 -----
@@ -37,11 +37,12 @@ from lactationcurve.preprocessing import standardize_lactation_columns
 
 
 def test_interval_method(
-    df,
-    days_in_milk_col=None,
-    milking_yield_col=None,
-    test_id_col=None,
-    default_test_id=1,
+    df: pd.DataFrame,
+    days_in_milk_col: str | None = None,
+    milking_yield_col: str | None = None,
+    test_id_col: str | None = None,
+    default_test_id: int = 0,
+    max_dim: int = 305,
 ) -> pd.DataFrame:
     """Compute 305-day total milk yield using the ICAR Test Interval Method.
 
@@ -63,13 +64,13 @@ def test_interval_method(
     Returns:
         pd.DataFrame: Two-column DataFrame with
             - "TestId": identifier per lactation,
-            - "Total305Yield": computed total milk yield over 305 days.
+            - "LactationMilkYield": computed total milk yield over 305 days.
 
     Raises:
         ValueError: If required columns (DaysInMilk or MilkingYield) cannot be found.
 
     Notes:
-        - Records with DIM > 305 are dropped before computation.
+        - Records with DIM > max_dim are dropped before computation.
         - At least two data points per TestId are required for trapezoidal integration;
           otherwise the lactation is skipped.
     """
@@ -81,7 +82,7 @@ def test_interval_method(
         milking_yield_col=milking_yield_col,
         test_id_col=test_id_col,
         default_test_id=default_test_id,
-        max_dim=305,
+        max_dim=max_dim,
     )
 
     result = []
@@ -119,7 +120,7 @@ def test_interval_method(
         total_yield = MY0 + total_intermediate + MYend
         result.append((lactation, total_yield))
 
-    return pd.DataFrame(result, columns=["TestId", "Total305Yield"])
+    return pd.DataFrame(result, columns=["TestId", "LactationMilkYield"])
 
 
 # to prevent pytest from trying to collect this function as a test

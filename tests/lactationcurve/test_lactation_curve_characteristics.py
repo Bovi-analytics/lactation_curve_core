@@ -39,6 +39,7 @@ import pandas as pd
 import pytest
 import sympy as sp
 from dotenv import find_dotenv, load_dotenv
+
 from lactationcurve.characteristics import (
     calculate_characteristic,
     lactation_curve_characteristic_function,

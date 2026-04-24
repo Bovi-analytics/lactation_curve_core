@@ -1,14 +1,16 @@
+set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
+
 # Run the lactation_curves FastAPI app locally (default)
 run:
-    cd apps/lactation_curves && uv run python -m uvicorn main:app --reload
+    cd apps/lactation_curves; uv run python -m uvicorn main:app --reload
 
 # Run the milkbot FastAPI app locally
 run-milkbot:
-    cd apps/milkbot && uv run python -m uvicorn main:app --reload
+    cd apps/milkbot; uv run python -m uvicorn main:app --reload
 
 # Run API integration tests against a running local server
 test-api:
-    cd apps/lactation_curves && uv run pytest tests/ -v
+    cd apps/lactation_curves; uv run pytest tests/ -v
 
 # Run all library-level tests
 test:
@@ -16,32 +18,32 @@ test:
 
 # Build the lactationcurve wheel
 build:
-    cd packages/python/lactation && uv build
+    cd packages/python/lactation; uv build
 
 # Publish the lactationcurve package to PyPI
 publish:
     #!/usr/bin/env bash
     set -euo pipefail
-    set -a && source .env && set +a
+    set -a; source .env; set +a
     rm -rf packages/python/lactation/dist
-    cd packages/python/lactation && uv build && uv publish
+    cd packages/python/lactation; uv build; uv publish
 
 # Build app for deployment
 build-app:
-    cd packages/python/infrastructure && just build-app
+    cd packages/python/infrastructure; just build-app
 
 # Preview infrastructure changes
 preview-infra:
-    cd packages/python/infrastructure && just preview
+    cd packages/python/infrastructure; just preview
 
 # Deploy infrastructure + function code
 deploy-infra:
-    cd packages/python/infrastructure && just deploy
+    cd packages/python/infrastructure; just deploy
 
 # Deploy lactation_curves function code only
 deploy-functions:
-    cd packages/python/infrastructure && just deploy-functions
+    cd packages/python/infrastructure; just deploy-functions
 
 # Deploy milkbot function code only
 deploy-functions-milkbot:
-    cd packages/python/infrastructure && just deploy-functions-milkbot
+    cd packages/python/infrastructure; just deploy-functions-milkbot
