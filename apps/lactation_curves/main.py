@@ -11,11 +11,12 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field, ValidationError, model_validator
+from starlette.middleware.base import BaseHTTPMiddleware
+
 from lactationcurve.characteristics import calculate_characteristic, test_interval_method
 from lactationcurve.fitting import fit_lactation_curve, milkbot_model
 from lactationcurve.preprocessing.validate_and_standardize import MilkBotPriors
-from pydantic import BaseModel, Field, ValidationError, model_validator
-from starlette.middleware.base import BaseHTTPMiddleware
 
 logger = logging.getLogger("lactation_curves")
 
@@ -481,7 +482,7 @@ def test_interval(
         "results": [
             {
                 "test_id": row["TestId"],
-                "total_305_yield": float(str(row["Total305Yield"])),
+                "total_305_yield": float(str(row["LactationMilkYield"])),
             }
             for _, row in result_df.iterrows()
         ],

@@ -7,11 +7,11 @@ using the **ICAR guideline**.
 
 > **Contact:** Meike van Leerdam, mbv32@cornell.edu
 >
-> **Authors:** Meike van Leerdam,Judith Osei-Tete, Douwe de Kok, Lucia Trapanese
+> **Authors:** Meike van Leerdam, Douwe de Kok, Judith Osei-Tete, Lucia Trapanese
 
 > **Initial authored:** 2025‑08‑12
 
-> **Updated:** 2026‑02‑24
+> **Updated:** 2026‑04‑23
 
 ---
 
@@ -59,6 +59,8 @@ Additional models available for a.o. symbolic LCC derivations:
   - time_to_peak, peak_yield, cumulative_milk_yield, persistency
 - **ICAR procedures cumulative milk yield:**
   - Test Interval Method
+  - Interpolation Standard Lactation Curve (ISLC) Method
+  - Best Predict Method
 - Input validation/normalization via `validate_and_prepare_inputs`
 - Caching of symbolic expressions for performance
 
@@ -90,7 +92,24 @@ The package is organized into three main modules:
 
 | `calculate_characteristic` | float (LCC value) |
 
-| `test_interval_method` | DataFrame with 305‑day totals |
+| `test_interval_method` | DataFrame with 305‑day totals per TestId |
+
+| `ISLC_method` | DataFrame with 305‑day totals per TestId  |
+
+| `best_predict_method` | DataFrame with 305‑day totals per TestId |
+
+---
+
+## The meaning of a TestId
+
+
+The `TestId` is an identifier for a lactation,
+which can be used to group records belonging to the same lactation together.
+It is not the same as a cow ID, as a cow can have multiple lactations
+(e.g., across different calvings).
+If a `TestId` column is not provided,
+the package will assume all records belong to a single lactation
+and will create a `TestId` column with all values set to 0.
 
 ---
 
@@ -142,6 +161,43 @@ https://doi.org/10.7717/peerj.54*
 
 ## Current version of the package
 
+
+## Background of the project
+
+The 305‑day yield for milk, fat, and protein is a widely used metric in
+dairy production, and the International Committee for Animal Recording
+(ICAR) provides guidelines outlining approved methods for its calculation.
+However, a global survey of milk recording organizations revealed
+substantial variation in how these methods are implemented. The Test
+Interval Method is used by 74% of the organizations, reflecting a
+preference for methodological simplicity, but it comes with trade-offs in
+estimation accuracy. The use of the other approved methods showed wide
+variation in correction factors, standard lactation curves, test‑day
+definitions, minimum sample requirements, and exclusion criteria. Such
+inconsistencies can introduce yield variability that complicates
+comparisons, for example in international breeding value evaluation, and
+limit the metric’s usefulness in universal models, such as decision
+support tools. Thus, the objective of this work was to reformulate the
+ICAR guideline section 2, procedure 2, into a unified, transparent, and
+accessible software implementation to improve standardization, enhance
+documentation, support continuous development, and increase the accuracy
+of 305‑day yield estimation.
+
+
+To achieve this, the ICAR guideline was converted into an open‑source,
+Python package that serves as the reference implementation for 305‑day
+yield calculation, with lactation‑curve modelling serving as the core of
+the package. In addition to the methods described in the original
+guideline, this work further incorporates 13 lactation‑curve models, with
+both frequentist and Bayesian fitting options, and provides tools to
+derive characteristics such as time to peak, peak yield, cumulative yield,
+and persistency. These features allow the package to be imported directly
+into analytical workflows, enabling users to calculate 305-day yields, fit
+and compare lactation curves, and derive key lactation characteristics, by
+calling a single function. Ongoing development includes an online
+validation platform that will allow users to upload lactation data and
+compare 305‑day yield estimates with reference calculations and observed
+cumulative yield.
 """
 
 

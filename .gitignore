@@ -24,3 +24,5 @@ node_modules
 
 #meike's test files
 tests/lactationcurve/test_dotenv.py
+tests/lactationcurve/test_data/TestDataSet.csv
+tests/lactationcurve/test_data/ActualMilkYieldsICAR platform.csv
