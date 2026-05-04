@@ -429,7 +429,7 @@ def fit(request: FitRequest) -> dict[str, list[float]]:
 @app.post("/characteristic")
 def characteristic(
     request: CharacteristicRequest,
-) -> dict[str, float]:
+) -> dict[str, float | None]:
     """Compute a single lactation characteristic from milk recordings.
 
     Fits a lactation curve model to the data, then derives one of:
@@ -438,7 +438,7 @@ def characteristic(
     - **cumulative_milk_yield**: total kg over the lactation.
     - **persistency**: rate of decline after peak.
 
-    Returns a single numeric value.
+    Returns a single numeric value, or null if no sensible value exists.
     """
     value = calculate_characteristic(
         dim=request.dim,
@@ -454,6 +454,8 @@ def characteristic(
         persistency_method=request.persistency_method,
         lactation_length=request.lactation_length,
     )
+    if value is None:
+        return {"value": None}
     return {"value": float(value)}
 
 
