@@ -8,7 +8,18 @@ Test Categories:
     - TestPredictionFunctions: single-lactation and multi-lactation prediction.
     - TestIntegration: real-file smoke and leave-one-id-out fit checks.
 
-Author: Meike and Copilot
+Usage:
+    Run all tests::
+
+        pytest tests/lactationcurve/test_best_predict.py -v
+
+    Run specific marker::
+
+        pytest tests/lactationcurve/test_best_predict.py -m utility -v
+        pytest tests/lactationcurve/test_best_predict.py -m integration -v
+
+Author:
+    Meike van Leerdam and copilot
 """
 
 from pathlib import Path
@@ -26,17 +37,13 @@ from lactationcurve.characteristics.best_predict import (
 )
 from lactationcurve.preprocessing import standardize_lactation_columns
 
-
-@pytest.fixture
-def package_data_dir() -> Path:
-    """Return package data directory containing standard curve assets."""
-    return Path("packages/python/lactation/data")
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 @pytest.fixture
 def test_data_dir() -> Path:
     """Return test data directory containing csv fixtures."""
-    return Path("tests/lactationcurve/test_data")
+    return REPO_ROOT / "tests" / "lactationcurve" / "test_data"
 
 
 @pytest.fixture
@@ -244,8 +251,8 @@ class TestPredictionFunctions:
         assert result["TestId"].tolist() == [5]
         assert result["LactationMilkYield"].iloc[0] == 3053.0
 
-    def test_best_predict_method_requires_covariance_or_reference(self, standard_curve):
-        """Main API should fail fast when neither covariance nor reference is supplied."""
+    def test_best_predict_method_uses_defaults_when_no_curve_or_covariance_passed(self):
+        """Main API should run with module defaults when optional args are omitted."""
         df = pd.DataFrame(
             {
                 "DaysInMilk": [1, 2],
@@ -253,8 +260,25 @@ class TestPredictionFunctions:
             }
         )
 
-        with pytest.raises(ValueError, match="Provide covariance_matrix or reference_df"):
-            best_predict_method(df, standard_lc=standard_curve)
+        result = best_predict_method(df)
+
+        assert list(result.columns) == ["TestId", "LactationMilkYield"]
+        assert len(result) == 1
+        assert np.isfinite(result["LactationMilkYield"]).all()
+
+    def test_best_predict_method_fit_from_reference_requires_reference_df(self):
+        """Fit-from-reference mode should fail fast when no reference dataframe is supplied."""
+        df = pd.DataFrame(
+            {
+                "DaysInMilk": [1, 2],
+                "MilkingYield": [11.0, 12.0],
+            }
+        )
+
+        with pytest.raises(
+            ValueError, match="Provide reference_df to fit your own standard lactation curve."
+        ):
+            best_predict_method(df, fit_standard_lc_from_data=True)
 
 
 class TestIntegration:
@@ -265,14 +289,7 @@ class TestIntegration:
         full_lac_single = pd.read_csv(test_data_dir / "l2_anim2_herd654.csv")
         full_lac_single = full_lac_single.rename(columns={"TestDayMilkYield": "MilkingYield"})
 
-        covariance_matrix = np.load(package_data_dir / "covariance_matrix_best_predict.npy")
-        standard_curve = np.load(package_data_dir / "standard_lc_wood.npy")
-
-        result = best_predict_method(
-            full_lac_single,
-            standard_lc=standard_curve,
-            covariance_matrix=covariance_matrix,
-        )
+        result = best_predict_method(full_lac_single)
 
         assert not result.empty
         assert "LactationMilkYield" in result.columns
@@ -284,7 +301,6 @@ class TestIntegration:
     ):
         """Leave-one-id-out fit should predict TestId 1483 within 5% of known total."""
         test_day_df = pd.read_csv(test_data_dir / "TestDataSet.csv")
-        test_day_df = test_day_df.rename(columns={"DailyMilkingYield": "MilkingYield"})
 
         test_id_to_predict = 1483
         actual_production_1483 = 10573.1
@@ -296,7 +312,9 @@ class TestIntegration:
 
         result_cov = best_predict_method(
             target_data,
-            standard_lc=np.load(package_data_dir / "standard_lc_wood.npy"),
+            days_in_milk_col="DaysInMilk",
+            milking_yield_col="DailyMilkingYield",
+            fit_standard_lc_from_data=True,
             reference_df=training_data,
         )
 

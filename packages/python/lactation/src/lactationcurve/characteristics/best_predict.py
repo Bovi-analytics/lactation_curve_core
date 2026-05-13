@@ -1,17 +1,37 @@
 """Best prediction for cumulative 305-day milk yield.
 
+Purpose
+-------
 This module implements the best-prediction approach described by VanRaden
 (1997) for ICAR Procedure 2, Section 2 (computing accumulated lactation
 yield).
 
-The workflow has three main steps:
+Method Summary
+--------------
+Best prediction combines a population-level standard lactation curve with
+correlation-based corrections derived from observed test-day deviations.
+The method projects observed deviations onto the full 305-day curve using a
+covariance structure estimated from reference data.
 
-1. Build a fixed-width milk-yield matrix on a day-1..305 grid.
-2. Fit a standard lactation curve and covariance structure from reference data.
-3. Predict total 305-day yield for complete or incomplete lactations.
+Key Entry Points
+----------------
+- ``best_predict_method``: Apply best prediction per ``TestId``.
+- ``best_predict_method_single_lac``: Predict one lactation.
+- ``fit_autocorrelation_matrix``: Fit covariance structure from reference data.
 
-The package ships with precomputed standard curve and covariance assets, but
-users can also fit these from their own reference population.
+Defaults
+--------
+- ``STANDARD_CURVE``: Baseline expected lactation curve for days 1..305 (Wood).
+- ``COV_MATRIX``: Default day-to-day covariance structure used for projection.
+
+Notes
+-----
+- The default assets are loaded from the package ``data`` directory.
+- Users can fit curve and covariance ingredients from their own reference
+    population.
+
+Author: Meike van Leerdam,
+Date: 24-04-2026
 """
 
 from pathlib import Path
@@ -274,8 +294,8 @@ def preprocess_measured_data(lactation: pd.DataFrame, standard_lc: np.ndarray) -
 
 def best_predict_method_single_lac(
     lactation: pd.DataFrame,
-    standard_lc: np.ndarray,
-    covariance_matrix: np.ndarray,
+    standard_lc: np.ndarray = STANDARD_CURVE,
+    covariance_matrix: np.ndarray = COV_MATRIX,
 ) -> float:
     """Predict 305-day cumulative yield for one lactation.
 
@@ -339,12 +359,13 @@ def best_predict_method_single_lac(
 
 def best_predict_method(
     df: pd.DataFrame,
-    standard_lc: np.ndarray,
+    standard_lc: np.ndarray = STANDARD_CURVE,
     days_in_milk_col: str | None = None,
     milking_yield_col: str | None = None,
     test_id_col: str | None = None,
     default_test_id: int = 0,
-    covariance_matrix: np.ndarray | None = None,
+    covariance_matrix: np.ndarray | None = COV_MATRIX,
+    fit_standard_lc_from_data: bool = False,
     reference_df: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Apply best prediction to one or more lactations.
@@ -376,9 +397,9 @@ def best_predict_method(
     )
 
     # Fit covariance if not provided
-    if covariance_matrix is None:
+    if fit_standard_lc_from_data:
         if reference_df is None:
-            raise ValueError("Provide covariance_matrix or reference_df")
+            raise ValueError("Provide reference_df to fit your own standard lactation curve.")
         reference_df = df = standardize_lactation_columns(
             reference_df,
             days_in_milk_col=days_in_milk_col,

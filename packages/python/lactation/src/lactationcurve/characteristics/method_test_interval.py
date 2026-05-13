@@ -1,11 +1,22 @@
-"""
-ICAR 305-day yield calculation — Test Interval Method.
+"""ICAR 305-day yield calculation using the Test Interval Method.
 
-This module implements the **Test Interval Method** described in ICAR guidelines
-(Procedure 2, Section 2: Computing of Accumulated Lactation Yield) to compute
-total **305-day milk yield** from test-day data.
+Purpose
+-------
+This module implements the ICAR Test Interval Method (Procedure 2,
+Section 2) to compute cumulative milk yield from test-day records.
 
-Approach
+Method Summary
+--------------
+Calculate total milk yield over 305 days by integrating test-day records using:
+- Linear projection from calving to the first test day,
+- Trapezoidal integration between consecutive test days,
+- Linear projection from the last test day to DIM=305.
+
+Key Entry Points
+----------------
+- ``test_interval_method``: Compute cumulative lactation milk yield per
+    ``TestId`` using start, interval, and end segments.
+
 --------
 - **Start segment**: Linear projection from calving (DIM=0) to the first test day.
 - **Intermediate segments**: **Trapezoidal rule** between consecutive test days.
@@ -28,7 +39,8 @@ Notes
 - Units: DIM in days, milk yield in kg.
 - Records with `DIM > 305` are excluded prior to computation.
 
-Author: Meike van Leerdam, Date: 07-31-2025
+Author: Meike van Leerdam,
+Date: 07-31-2025
 """
 
 import pandas as pd
