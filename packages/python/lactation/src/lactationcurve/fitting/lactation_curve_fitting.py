@@ -2,7 +2,16 @@
 Lactation curve fitting module.
 
 This module provides functions for fitting lactation curve models to dairy cow
-lactation data and predicting milk yield.
+lactation data and predicting milk yield. The background of lactation curve fitting,
+including all the references for the models can be found in the following book chapter:
+
+
+van Leerdam, M., Trapanese, L., Yongyan, C., Hermans, K., Salamone, M.,
+ Liu, E., & Hostens, M. (2026).
+*Advances in Precision Dairy and Beef Farming Technologies –
+Chapter 19: Modeling the Lactation Curves of Dairy Ruminants.*
+Francis Dodds. (in publication)
+
 
 Pre-defined lactation curve models
 ----------------------------------
